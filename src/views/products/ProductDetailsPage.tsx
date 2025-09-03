@@ -18,12 +18,12 @@ import {
 } from '@/components/ui';
 import DataTable from '@/components/shared/DataTable';
 import type { ColumnDef } from '@/components/shared/DataTable';
-import { HiOutlineArrowLeft, HiOutlinePrinter, HiOutlinePlus, HiOutlinePencil } from 'react-icons/hi';
+import { HiOutlineArrowLeft, HiOutlinePrinter, HiOutlinePlus, HiOutlinePencil, HiOutlineSearch } from 'react-icons/hi';
 import { useNavigate } from 'react-router-dom';
 import { MdAssignment, MdInventory } from 'react-icons/md';
 import { BiBox } from 'react-icons/bi';
 import { ClipLoader } from 'react-spinners';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 interface InventoryItem {
   id: number;
@@ -133,6 +133,9 @@ const ProductDetailsPage = () => {
     purchasePrice: '',
     location: ''
   });
+
+  // Search state for inventory items
+  const [inventorySearch, setInventorySearch] = useState('');
 
   const { 
     data: productResponse, 
@@ -295,6 +298,35 @@ const ProductDetailsPage = () => {
 
   // Extract product data from response structure
   const product = productResponse?.data?.data || productResponse?.data;
+
+  // Filtered inventory data based on search
+  const filteredInventoryData = useMemo(() => {
+    if (!product?.inventory || !inventorySearch.trim()) {
+      return product?.inventory || [];
+    }
+
+    const searchTerm = inventorySearch.toLowerCase().trim();
+    
+    return product.inventory.filter((item: InventoryItem) => {
+      const serialNumber = item.serialNumber?.toLowerCase() || '';
+      const itemId = `item #${item.id}`.toLowerCase();
+      const status = item.status.toLowerCase();
+      const condition = item.condition.toLowerCase();
+      const location = item.location?.toLowerCase() || '';
+      const notes = item.notes?.toLowerCase() || '';
+      const purchaseDate = item.purchaseDate ? new Date(item.purchaseDate).toLocaleDateString().toLowerCase() : '';
+      
+      return (
+        serialNumber.includes(searchTerm) ||
+        itemId.includes(searchTerm) ||
+        status.includes(searchTerm) ||
+        condition.includes(searchTerm) ||
+        location.includes(searchTerm) ||
+        notes.includes(searchTerm) ||
+        purchaseDate.includes(searchTerm)
+      );
+    });
+  }, [product?.inventory, inventorySearch]);
 
   // Table columns for inventory
   const inventoryColumns: ColumnDef<InventoryItem>[] = [
@@ -555,6 +587,35 @@ const ProductDetailsPage = () => {
           </div>
         </div>
 
+        {/* Search Input for Inventory */}
+        <div className="mb-4 max-w-md">
+          <Input
+            placeholder="Search inventory items..."
+            value={inventorySearch}
+            onChange={(e) => setInventorySearch(e.target.value)}
+            prefix={<HiOutlineSearch className="text-gray-400" />}
+            clearButton
+            onClear={() => setInventorySearch('')}
+          />
+        </div>
+
+        {/* Search Results Info */}
+        {inventorySearch.trim() && (
+          <div className="mb-3 text-sm text-gray-600">
+            Showing {filteredInventoryData.length} of {product.inventory?.length || 0} items
+            {filteredInventoryData.length !== (product.inventory?.length || 0) && (
+              <Button
+                variant="plain"
+                size="xs"
+                className="ml-2"
+                onClick={() => setInventorySearch('')}
+              >
+                Clear search
+              </Button>
+            )}
+          </div>
+        )}
+
         {!product.inventory || product.inventory.length === 0 ? (
           <div className="text-center py-8">
             <BiBox className="mx-auto h-12 w-12 text-gray-400 mb-4" />
@@ -568,10 +629,22 @@ const ProductDetailsPage = () => {
               Add First Stock
             </Button>
           </div>
+        ) : filteredInventoryData.length === 0 ? (
+          <div className="text-center py-8">
+            <HiOutlineSearch className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+            <p className="text-gray-500">No inventory items match your search</p>
+            <Button
+              className="mt-4"
+              variant="plain"
+              onClick={() => setInventorySearch('')}
+            >
+              Clear search
+            </Button>
+          </div>
         ) : (
           <DataTable
             columns={inventoryColumns}
-            data={product.inventory}
+            data={filteredInventoryData}
           />
         )}
       </Card>
