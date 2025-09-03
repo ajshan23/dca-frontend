@@ -1,0 +1,6 @@
+export const SUPERADMIN='super_admin'
+export const ADMIN = 'admin'
+export const FINANCE='finance'
+export const DRIVER='driver'
+export const ENGINEER='engineer'
+export const USER = 'user'
