@@ -4,10 +4,10 @@ import {
   apiGetProductById,
   apiGenerateProductQrCode,
   apiAddStock,
-  apiUpdateInventoryItem
+  apiUpdateInventoryItem,
+  apiGenerateAssignmentQrCode
 } from '@/services/ProductService';
 import { 
-  Badge, 
   Button, 
   Card, 
   Notification, 
@@ -18,7 +18,7 @@ import {
 } from '@/components/ui';
 import DataTable from '@/components/shared/DataTable';
 import type { ColumnDef } from '@/components/shared/DataTable';
-import { HiOutlineArrowLeft, HiOutlinePrinter, HiOutlinePlus, HiOutlinePencil, HiOutlineSearch } from 'react-icons/hi';
+import { HiOutlineArrowLeft, HiOutlinePrinter, HiOutlinePlus, HiOutlinePencil, HiOutlineSearch, HiOutlineQrcode } from 'react-icons/hi';
 import { useNavigate } from 'react-router-dom';
 import { MdAssignment, MdInventory } from 'react-icons/md';
 import { BiBox } from 'react-icons/bi';
@@ -98,25 +98,25 @@ interface ProductDetails {
 }
 
 const statusColorMap: Record<string, string> = {
-  AVAILABLE: 'bg-green-500 text-white w-fit',
-  ASSIGNED: 'bg-blue-500 text-white w-fit',
-  MAINTENANCE: 'bg-yellow-500 text-white w-fit',
-  DAMAGED: 'bg-red-500 text-white w-fit',
-  RETIRED: 'bg-gray-500 text-white w-fit'
+  AVAILABLE: 'text-green-600 bg-transparent  w-fit',
+  ASSIGNED: 'text-blue-600 bg-transparent  w-fit',
+  MAINTENANCE: 'text-yellow-600 bg-transparent  w-fit',
+  DAMAGED: 'text-red-600 bg-transparent  w-fit',
+  RETIRED: 'text-gray-600 bg-transparent  w-fit'
 };
 
 const conditionColorMap: Record<string, string> = {
-  NEW: 'bg-green-500 text-white w-fit',
-  GOOD: 'bg-blue-500 text-white w-fit',
-  FAIR: 'bg-yellow-500 text-white w-fit',
-  POOR: 'bg-orange-500 text-white w-fit',
-  DAMAGED: 'bg-red-500 text-white w-fit'
+  NEW: 'text-green-600 bg-transparent  w-fit',
+  GOOD: 'text-blue-600 bg-transparent  w-fit',
+  FAIR: 'text-yellow-600 bg-transparent  w-fit',
+  POOR: 'text-orange-600 bg-transparent  w-fit',
+  DAMAGED: 'text-red-600 bg-transparent  w-fit'
 };
 
 const assignmentStatusColorMap: Record<string, string> = {
-  ASSIGNED: 'bg-blue-500 text-white w-fit',
-  RETURNED: 'bg-emerald-500 text-white w-fit',
-  OVERDUE: 'bg-red-500 text-white w-fit'
+  ASSIGNED: 'text-blue-600 bg-transparent   w-fit',
+  RETURNED: 'text-emerald-600 bg-transparent   w-fit',
+  OVERDUE: 'text-red-600 bg-transparent  w-fit'
 };
 
 const ProductDetailsPage = () => {
@@ -167,6 +167,29 @@ const ProductDetailsPage = () => {
       );
     }
   });
+
+ const { mutate: generateAssignmentQr, isPending: isGeneratingAssignmentQr } = useMutation({
+  mutationFn: async (assignmentId: number) => {
+    const response = await apiGenerateAssignmentQrCode(assignmentId);
+    if (!response.data?.qrCode) {
+      throw new Error('Invalid QR code data received from server');
+    }
+    return { 
+      qrCode: response.data.qrCode, 
+      assignmentInfo: response.data.assignmentInfo 
+    };
+  },
+  onSuccess: (data) => {
+    handlePrintAssignmentQrCode(data.qrCode, data.assignmentInfo);
+  },
+  onError: (error: Error) => {
+    toast.push(
+      <Notification title="Error" type="danger">
+        {error.message || 'Failed to generate assignment QR code'}
+      </Notification>
+    );
+  }
+});
 
   const { mutate: addStock, isPending: isAddingStock } = useMutation({
     mutationFn: (stockData: any) => apiAddStock(Number(id), stockData),
@@ -255,6 +278,58 @@ const ProductDetailsPage = () => {
     }
   };
 
+  const handlePrintAssignmentQrCode = (qrCodeData: string, assignmentInfo: any) => {
+    const printWindow = window.open('', '_blank', 'width=600,height=700');
+    if (printWindow && product) {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Assignment QR Code - ${assignmentInfo.productName}</title>
+            <style>
+              body { 
+                font-family: Arial, sans-serif;
+                text-align: center;
+                padding: 20px;
+              }
+              .qr-container {
+                margin: 20px auto;
+                width: 300px;
+                height: 300px;
+              }
+              .assignment-info {
+                margin-bottom: 20px;
+                text-align: left;
+              }
+              .info-row {
+                margin-bottom: 8px;
+              }
+              img { width: 100%; height: auto; }
+            </style>
+          </head>
+          <body>
+            <h2>Assignment QR Code</h2>
+            <div class="assignment-info">
+              <div class="info-row"><strong>Product:</strong> ${assignmentInfo.productName}</div>
+              <div class="info-row"><strong>Assigned To:</strong> ${assignmentInfo.employeeName}</div>
+              <div class="info-row"><strong>Assigned On:</strong> ${new Date(assignmentInfo.assignedAt).toLocaleDateString()}</div>
+              <div class="info-row"><strong>Status:</strong> ${assignmentInfo.status}</div>
+              ${assignmentInfo.expectedReturnAt ? 
+                `<div class="info-row"><strong>Expected Return:</strong> ${new Date(assignmentInfo.expectedReturnAt).toLocaleDateString()}</div>` : ''}
+            </div>
+            <div class="qr-container">
+              <img src="${qrCodeData}" alt="Assignment QR Code" />
+            </div>
+            <script>
+              setTimeout(() => { window.print(); window.close(); }, 300);
+            </script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
+  };
+
   const resetStockForm = () => {
     setStockForm({
       quantity: 1,
@@ -291,6 +366,7 @@ const ProductDetailsPage = () => {
         condition: selectedInventory.condition,
         location: selectedInventory.location,
         notes: selectedInventory.notes,
+        serialNumber: selectedInventory.serialNumber,
         reason: 'Manual inventory update'
       }
     });
@@ -337,23 +413,19 @@ const ProductDetailsPage = () => {
     {
       header: 'Status',
       cell: (props) => (
-        <Badge className={statusColorMap[props.row.original.status] || 'bg-gray-500'}>
+        <div className={statusColorMap[props.row.original.status] || 'bg-gray-500'}>
           {props.row.original.status}
-        </Badge>
+        </div>
       ),
     },
     {
       header: 'Condition',
       cell: (props) => (
-        <Badge className={conditionColorMap[props.row.original.condition] || 'bg-gray-500 text-white'}>
+        <div className={conditionColorMap[props.row.original.condition] || 'bg-gray-500 text-white'}>
           {props.row.original.condition}
-        </Badge>
+        </div>
       ),
     },
-    // {
-    //   header: 'Location',
-    //   cell: (props) => props.row.original.location || '-',
-    // },
     {
       header: 'Purchase Date',
       cell: (props) => (
@@ -362,7 +434,6 @@ const ProductDetailsPage = () => {
           : '-'
       ),
     },
-   
     {
       header: 'Actions',
       cell: (props) => (
@@ -418,18 +489,18 @@ const ProductDetailsPage = () => {
     {
       header: 'Status',
       cell: (props) => (
-        <Badge className={assignmentStatusColorMap[props.row.original.status] || 'bg-gray-500'}>
+        <div className={assignmentStatusColorMap[props.row.original.status] || 'bg-gray-500'}>
           {props.row.original.status}
-        </Badge>
+        </div>
       ),
     },
     {
       header: 'Return Condition',
       cell: (props) => (
         props.row.original.returnCondition ? (
-          <Badge className={conditionColorMap[props.row.original.returnCondition] || 'bg-gray-500 text-white'}>
+          <div className={conditionColorMap[props.row.original.returnCondition] || 'bg-gray-500 text-white'}>
             {props.row.original.returnCondition}
-          </Badge>
+          </div>
         ) : (
           <span>-</span>
         )
@@ -438,6 +509,18 @@ const ProductDetailsPage = () => {
     {
       header: 'Assigned By',
       cell: (props) => props.row.original.assignedBy?.username || 'Unknown',
+    },
+    {
+      header: 'Actions',
+      cell: (props) => (
+        <Button
+          size="xs"
+          icon={<HiOutlineQrcode />}
+          onClick={() => generateAssignmentQr(props.row.original.id)}
+          loading={isGeneratingAssignmentQr}
+          title="Generate QR Code"
+        />
+      ),
     },
   ];
 
@@ -480,14 +563,7 @@ const ProductDetailsPage = () => {
           >
             Add Stock
           </Button>
-          <Button
-            variant="solid"
-            icon={<HiOutlinePrinter />}
-            loading={isGeneratingQr}
-            onClick={() => generateQrCode(Number(id))}
-          >
-            Generate & Print QR
-          </Button>
+          
         </div>
       </div>
 
@@ -532,9 +608,9 @@ const ProductDetailsPage = () => {
 
           <div>
             <div className="flex items-center gap-4 mb-4">
-              <Badge className={product.complianceStatus ? 'text-white bg-green-500' : 'text-white bg-red-500'}>
+              <div className={product.complianceStatus ? 'font-bold text-green-500' : 'font-bold text-red-500'}>
                 {product.complianceStatus ? 'Compliant' : 'Non-compliant'}
-              </Badge>
+              </div>
             </div>
 
             {/* Stock Statistics */}
@@ -699,8 +775,6 @@ const ProductDetailsPage = () => {
             />
           </div>
 
-         
-
           <div>
             <label className="block text-sm font-medium mb-1">
               Serial Numbers (Optional - {stockForm.serialNumbers.length} of {stockForm.quantity})
@@ -740,7 +814,7 @@ const ProductDetailsPage = () => {
         </div>
       </Dialog>
 
-      {/* Edit Inventory Dialog */}
+      {/* Edit Inventory Dialog - Updated with Serial Number field */}
       <Dialog
         isOpen={editInventoryDialog}
         onClose={() => setEditInventoryDialog(false)}
@@ -749,6 +823,19 @@ const ProductDetailsPage = () => {
         <h4 className="mb-4">Edit Inventory Item</h4>
         {selectedInventory && (
           <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Serial Number</label>
+              <Input
+                type="text"
+                value={selectedInventory.serialNumber || ''}
+                onChange={(e) => setSelectedInventory({
+                  ...selectedInventory,
+                  serialNumber: e.target.value || null
+                })}
+                placeholder="Enter serial number"
+              />
+            </div>
+
             <div>
               <label className="block text-sm font-medium mb-1">Status</label>
               <Select
@@ -783,8 +870,6 @@ const ProductDetailsPage = () => {
                 })}
               />
             </div>
-
-            
 
             <div>
               <label className="block text-sm font-medium mb-1">Notes</label>

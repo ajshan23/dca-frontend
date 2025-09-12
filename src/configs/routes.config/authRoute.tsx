@@ -32,6 +32,12 @@ const authRoute: Routes = [
         component: lazy(() => import('@/views/auth/ResetPassword')),
         authority: [],
     },
+    {
+        key:"product",
+        path:"/product-public-view/:assignmentId",
+       component: lazy(() => import('@/views/public/PublicInventoryView')),
+       authority:[]
+    }
     
 ]
 

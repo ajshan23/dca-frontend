@@ -38,8 +38,7 @@ interface Product {
   category: {
     id: number;
     name: string;
-  
-// export default ProductTable;
+  };
   branch: {
     id: number;
     name: string;
@@ -55,7 +54,7 @@ interface Product {
   createdAt: string;
   stockInfo: StockInfo;
 }
-}
+
 interface InventoryItem {
   id: number;
   serialNumber?: string;
@@ -329,11 +328,11 @@ const ProductTable = () => {
     
     switch (stockStatus) {
       case 'OUT_OF_STOCK':
-        return <Badge className="bg-red-500 text-white">Out of Stock</Badge>;
+        return <div className="text-red-600 bg-red-50 px-2 py-1 rounded text-sm">Out of Stock</div>;
       case 'LOW_STOCK':
-        return <Badge className="bg-yellow-500 text-white">Low Stock ({availableStock})</Badge>;
+        return <div className="text-yellow-600 bg-yellow-50 px-2 py-1 rounded text-sm">Low Stock ({availableStock})</div>;
       default:
-        return <Badge className="bg-green-500 text-white">Available ({availableStock})</Badge>;
+        return <div className="text-green-600 bg-green-50 px-2 py-1 rounded text-sm">Available ({availableStock})</div>;
     }
   };
 
@@ -378,9 +377,9 @@ const ProductTable = () => {
     {
       header: 'Compliance',
       cell: (props) => (
-        <Badge className={props.row.original.complianceStatus ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}>
+        <div className={props.row.original.complianceStatus ? 'text-green-600 bg-green-50 px-2 py-1 rounded text-sm' : 'text-red-600 bg-red-50 px-2 py-1 rounded text-sm'}>
           {props.row.original.complianceStatus ? 'Compliant' : 'Non-compliant'}
-        </Badge>
+        </div>
       ),
     },
     {
@@ -574,73 +573,114 @@ const ProductTable = () => {
         )}
       </Dialog>
 
-      {/* Add Stock Dialog */}
+      {/* Add Stock Dialog - Fixed with proper scrolling */}
       <Dialog
         isOpen={addStockDialogOpen}
         onClose={resetAddStockForm}
         onRequestClose={resetAddStockForm}
         width={500}
       >
-        <h4 className="mb-4">Add Stock</h4>
-        {selectedProduct && (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Product</label>
-              <p className="font-semibold">{selectedProduct.name}</p>
-            </div>
+        <div className="max-h-[80vh] flex flex-col">
+          <h4 className="mb-4 flex-shrink-0">Add Stock</h4>
+          
+          {selectedProduct && (
+            <>
+              {/* Scrollable content area */}
+              <div className="flex-1 overflow-y-auto pr-2">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Product</label>
+                    <p className="font-semibold">{selectedProduct.name}</p>
+                  </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Quantity</label>
-              <Input
-                type="number"
-                min="1"
-                max="100"
-                value={stockQuantity}
-                onChange={(e) => setStockQuantity(Number(e.target.value))}
-              />
-            </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Quantity</label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={stockQuantity}
+                      onChange={(e) => {
+                        const qty = Number(e.target.value);
+                        setStockQuantity(qty);
+                        // Adjust serial numbers array to match quantity
+                        const newSerialNumbers = Array.from({ length: qty }, (_, i) => 
+                          stockSerialNumbers[i] || ''
+                        );
+                        setStockSerialNumbers(newSerialNumbers);
+                      }}
+                    />
+                  </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Serial Numbers (Optional)
-              </label>
-              {Array.from({ length: stockQuantity }, (_, index) => (
-                <Input
-                  key={index}
-                  type="text"
-                  placeholder={`Serial number ${index + 1}`}
-                  value={stockSerialNumbers[index] || ''}
-                  onChange={(e) => {
-                    const newSerialNumbers = [...stockSerialNumbers];
-                    newSerialNumbers[index] = e.target.value;
-                    setStockSerialNumbers(newSerialNumbers);
-                  }}
-                  className="mb-2"
-                />
-              ))}
-              <p className="text-xs text-gray-500">
-                Leave empty for non-serialized items
-              </p>
-            </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Serial Numbers (Optional - {stockSerialNumbers.filter(sn => sn.trim()).length} of {stockQuantity} filled)
+                    </label>
+                    
+                    {/* Show warning if many items */}
+                    {stockQuantity > 10 && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded p-2 mb-2">
+                        <p className="text-sm text-yellow-700">
+                          Large quantity detected. Consider using batch serial number format or leave empty for auto-generation.
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* Container for serial inputs with its own scroll */}
+                    <div 
+                      className="max-h-60 overflow-y-auto border rounded p-3 bg-gray-50"
+                      style={{ 
+                        scrollbarWidth: 'thin',
+                        scrollbarColor: '#cbd5e1 #f1f5f9'
+                      }}
+                    >
+                      <div className="space-y-2">
+                        {Array.from({ length: stockQuantity }, (_, index) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500 w-8 flex-shrink-0">#{index + 1}</span>
+                            <Input
+                              type="text"
+                              placeholder={`Serial number ${index + 1}`}
+                              value={stockSerialNumbers[index] || ''}
+                              onChange={(e) => {
+                                const newSerialNumbers = [...stockSerialNumbers];
+                                newSerialNumbers[index] = e.target.value;
+                                setStockSerialNumbers(newSerialNumbers);
+                              }}
+                              className="flex-1"
+                              size="sm"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Leave empty for non-serialized items. Scroll within the box above for many items.
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-            <div className="flex justify-end gap-2 mt-6">
-              <Button
-                variant="plain"
-                onClick={resetAddStockForm}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="solid"
-                onClick={handleAddStockSubmit}
-                loading={addStockMutation.isLoading}
-                icon={<BiBox />}
-              >
-                Add Stock
-              </Button>
-            </div>
-          </div>
-        )}
+              {/* Fixed action buttons */}
+              <div className="flex justify-end gap-2 mt-6 pt-4 border-t flex-shrink-0">
+                <Button
+                  variant="plain"
+                  onClick={resetAddStockForm}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="solid"
+                  onClick={handleAddStockSubmit}
+                  loading={addStockMutation.isLoading}
+                  icon={<BiBox />}
+                >
+                  Add Stock
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
       </Dialog>
 
       {/* Return Product Dialog */}

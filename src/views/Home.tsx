@@ -4,7 +4,6 @@ import Progress from '@/components/ui/Progress'
 import Chart from '@/components/shared/Chart'
 import { COLORS } from '@/constants/chart.constant'
 import Button from '@/components/ui/Button'
-import Badge from '@/components/ui/Badge'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { apiGetStockSummary, apiGetAssignmentAnalytics } from '@/services/ProductService'
@@ -367,9 +366,9 @@ const ProductDashboard = () => {
                       <p>{new Date(assignment.assignedAt).toLocaleDateString()}</p>
                     </div>
                   </div>
-                  <Badge className={assignment.isOverdue ? "bg-red-500 text-white" : "bg-blue-500 text-white"}>
+                  <div className={`px-2 py-1 rounded text-xs font-medium ${assignment.isOverdue ? "text-red-600" : "text-blue-600"}`}>
                     {assignment.isOverdue ? `Overdue (${assignment.daysOverdue}d)` : 'Active'}
-                  </Badge>
+                  </div>
                 </div>
               ))
             )}
@@ -397,13 +396,13 @@ const ProductDashboard = () => {
                       <p>{new Date(transaction.createdAt).toLocaleDateString()}</p>
                     </div>
                   </div>
-                  <Badge className={
-                    transaction.type === 'IN' ? 'bg-green-500 text-white' :
-                    transaction.type === 'OUT' ? 'bg-blue-500 text-white' :
-                    'bg-gray-500 text-white'
-                  }>
+                  <div className={`px-2 py-1 rounded text-xs font-medium ${
+                    transaction.type === 'IN' ? 'text-green-600' :
+                    transaction.type === 'OUT' ? 'text-blue-600' :
+                    'text-gray-600'
+                  }`}>
                     {transaction.type}
-                  </Badge>
+                  </div>
                 </div>
               ))
             )}
@@ -439,9 +438,9 @@ const ProductDashboard = () => {
                     <td className="py-3 text-center">{product.currentStock}</td>
                     <td className="py-3 text-center">{product.minStock}</td>
                     <td className="py-3 text-center">
-                      <Badge className={product.currentStock === 0 ? 'bg-red-500 text-white' : 'bg-orange-500 text-white'}>
+                      <div className={`px-2 py-1 rounded text-xs font-medium ${product.currentStock === 0 ? 'text-red-600' : 'text-orange-600'}`}>
                         {product.currentStock === 0 ? 'Out of Stock' : 'Low Stock'}
-                      </Badge>
+                      </div>
                     </td>
                   </tr>
                 ))}

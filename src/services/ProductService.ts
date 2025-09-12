@@ -327,6 +327,12 @@ export const apiGetAssignedProducts = async (params?: Record<string, any>) => {
   });
 };
 
+export const apiGenerateAssignmentQrCode = async (assignmentId: number) => {
+    return ApiService.fetchData({
+        url: `/product-assignments/${assignmentId}/qr-code`,
+        method: 'get'
+    })
+}
 export default {
   apiGetProducts,
   apiGetProductById,
@@ -349,5 +355,6 @@ export default {
   apiGetStockTransactions,
   apiGenerateProductQrCode,
   apiGenerateInventoryQrCode,
-  apiGetAssignedProducts
+  apiGetAssignedProducts,
+  apiGenerateAssignmentQrCode
 };

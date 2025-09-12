@@ -1,1 +1,0 @@
-import{j as s,c as m,A as c}from"./index-kzRICtfs.js";const i="/img/logo/",n=o=>{const{type:l="full",mode:r="light",className:a,imgClass:t,style:e,logoWidth:g="auto"}=o;return s.jsx("div",{className:m("logo",a),style:{...e,width:g},children:s.jsx("img",{className:t,src:`${i}logo-dark-${l}.svg`,alt:`${c} logo`})})};export{n as L};

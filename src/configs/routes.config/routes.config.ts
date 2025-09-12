@@ -90,6 +90,12 @@ export const protectedRoutes = [
         component: lazy(() => import('@/views/products/ProductList')),
         authority: [ADMIN,SUPERADMIN,USER],
     },
+     {
+        key:"product",
+        path:"/product-public-view/:assignmentId",
+       component: lazy(() => import('@/views/public/PublicInventoryView')),
+       authority:[]
+    },
     {
         key: 'productsCreate',
         path: '/products/create',
