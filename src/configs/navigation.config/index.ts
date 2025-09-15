@@ -88,6 +88,16 @@ const navigationConfig: NavigationTree[] = [
         authority: [SUPERADMIN, ADMIN],
         subMenu: [],
     },
+    {
+        key: 'export',
+        path: '/export',
+        title: 'Export',
+        translateKey: 'nav.export',
+        icon: 'export',
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: [SUPERADMIN, ADMIN],
+        subMenu: [],
+    },
     // {
     //     key: 'productAssignments',
     //     path: '/product-assignments',

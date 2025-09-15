@@ -151,7 +151,18 @@ export const protectedRoutes = [
         authority: [ADMIN,SUPERADMIN],
         
     },
-
+    {
+        key:"settings",
+        path:"/settings",
+       component: lazy(() => import('@/views/users/UserCredentialsReset')),
+       authority:[]
+    },
+    {
+        key:"export",
+        path:"/export",
+       component: lazy(() => import('@/views/export/ExportPage')),
+       authority:[]
+    },
     /** Example purpose only, please remove */
     {
         key: 'singleMenuItem',

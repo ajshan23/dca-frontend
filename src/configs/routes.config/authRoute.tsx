@@ -37,7 +37,8 @@ const authRoute: Routes = [
         path:"/product-public-view/:assignmentId",
        component: lazy(() => import('@/views/public/PublicInventoryView')),
        authority:[]
-    }
+    },
+    
     
 ]
 

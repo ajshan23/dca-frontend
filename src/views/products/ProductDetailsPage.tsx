@@ -1,16 +1,16 @@
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { 
+import {
   apiGetProductById,
   apiGenerateProductQrCode,
   apiAddStock,
   apiUpdateInventoryItem,
   apiGenerateAssignmentQrCode
 } from '@/services/ProductService';
-import { 
-  Button, 
-  Card, 
-  Notification, 
+import {
+  Button,
+  Card,
+  Notification,
   toast,
   Dialog,
   Input,
@@ -137,8 +137,8 @@ const ProductDetailsPage = () => {
   // Search state for inventory items
   const [inventorySearch, setInventorySearch] = useState('');
 
-  const { 
-    data: productResponse, 
+  const {
+    data: productResponse,
     isLoading: isLoadingProduct,
     error: productError,
     refetch
@@ -168,28 +168,28 @@ const ProductDetailsPage = () => {
     }
   });
 
- const { mutate: generateAssignmentQr, isPending: isGeneratingAssignmentQr } = useMutation({
-  mutationFn: async (assignmentId: number) => {
-    const response = await apiGenerateAssignmentQrCode(assignmentId);
-    if (!response.data?.qrCode) {
-      throw new Error('Invalid QR code data received from server');
+  const { mutate: generateAssignmentQr, isPending: isGeneratingAssignmentQr } = useMutation({
+    mutationFn: async (assignmentId: number) => {
+      const response = await apiGenerateAssignmentQrCode(assignmentId);
+      if (!response.data?.qrCode) {
+        throw new Error('Invalid QR code data received from server');
+      }
+      return {
+        qrCode: response.data.qrCode,
+        assignmentInfo: response.data.assignmentInfo
+      };
+    },
+    onSuccess: (data) => {
+      handlePrintAssignmentQrCode(data.qrCode, data.assignmentInfo);
+    },
+    onError: (error: Error) => {
+      toast.push(
+        <Notification title="Error" type="danger">
+          {error.message || 'Failed to generate assignment QR code'}
+        </Notification>
+      );
     }
-    return { 
-      qrCode: response.data.qrCode, 
-      assignmentInfo: response.data.assignmentInfo 
-    };
-  },
-  onSuccess: (data) => {
-    handlePrintAssignmentQrCode(data.qrCode, data.assignmentInfo);
-  },
-  onError: (error: Error) => {
-    toast.push(
-      <Notification title="Error" type="danger">
-        {error.message || 'Failed to generate assignment QR code'}
-      </Notification>
-    );
-  }
-});
+  });
 
   const { mutate: addStock, isPending: isAddingStock } = useMutation({
     mutationFn: (stockData: any) => apiAddStock(Number(id), stockData),
@@ -213,7 +213,7 @@ const ProductDetailsPage = () => {
   });
 
   const { mutate: updateInventory, isPending: isUpdatingInventory } = useMutation({
-    mutationFn: (data: { inventoryId: number; updateData: any }) => 
+    mutationFn: (data: { inventoryId: number; updateData: any }) =>
       apiUpdateInventoryItem(data.inventoryId, data.updateData),
     onSuccess: (response) => {
       toast.push(
@@ -314,8 +314,8 @@ const ProductDetailsPage = () => {
               <div class="info-row"><strong>Assigned To:</strong> ${assignmentInfo.employeeName}</div>
               <div class="info-row"><strong>Assigned On:</strong> ${new Date(assignmentInfo.assignedAt).toLocaleDateString()}</div>
               <div class="info-row"><strong>Status:</strong> ${assignmentInfo.status}</div>
-              ${assignmentInfo.expectedReturnAt ? 
-                `<div class="info-row"><strong>Expected Return:</strong> ${new Date(assignmentInfo.expectedReturnAt).toLocaleDateString()}</div>` : ''}
+              ${assignmentInfo.expectedReturnAt ?
+          `<div class="info-row"><strong>Expected Return:</strong> ${new Date(assignmentInfo.expectedReturnAt).toLocaleDateString()}</div>` : ''}
             </div>
             <div class="qr-container">
               <img src="${qrCodeData}" alt="Assignment QR Code" />
@@ -347,7 +347,7 @@ const ProductDetailsPage = () => {
       location: stockForm.location.trim() || undefined,
       reason: 'Manual stock addition'
     };
-    
+
     addStock(stockData);
   };
 
@@ -358,7 +358,7 @@ const ProductDetailsPage = () => {
 
   const handleUpdateInventorySubmit = () => {
     if (!selectedInventory) return;
-    
+
     updateInventory({
       inventoryId: selectedInventory.id,
       updateData: {
@@ -382,7 +382,7 @@ const ProductDetailsPage = () => {
     }
 
     const searchTerm = inventorySearch.toLowerCase().trim();
-    
+
     return product.inventory.filter((item: InventoryItem) => {
       const serialNumber = item.serialNumber?.toLowerCase() || '';
       const itemId = `item #${item.id}`.toLowerCase();
@@ -391,7 +391,7 @@ const ProductDetailsPage = () => {
       const location = item.location?.toLowerCase() || '';
       const notes = item.notes?.toLowerCase() || '';
       const purchaseDate = item.purchaseDate ? new Date(item.purchaseDate).toLocaleDateString().toLowerCase() : '';
-      
+
       return (
         serialNumber.includes(searchTerm) ||
         itemId.includes(searchTerm) ||
@@ -413,7 +413,7 @@ const ProductDetailsPage = () => {
     {
       header: 'Status',
       cell: (props) => (
-        <div className={statusColorMap[props.row.original.status] || 'bg-gray-500'}>
+        <div className={statusColorMap[props.row.original.status] || ''}>
           {props.row.original.status}
         </div>
       ),
@@ -421,7 +421,7 @@ const ProductDetailsPage = () => {
     {
       header: 'Condition',
       cell: (props) => (
-        <div className={conditionColorMap[props.row.original.condition] || 'bg-gray-500 text-white'}>
+        <div className={conditionColorMap[props.row.original.condition] || ''}>
           {props.row.original.condition}
         </div>
       ),
@@ -429,7 +429,7 @@ const ProductDetailsPage = () => {
     {
       header: 'Purchase Date',
       cell: (props) => (
-        props.row.original.purchaseDate 
+        props.row.original.purchaseDate
           ? new Date(props.row.original.purchaseDate).toLocaleDateString()
           : '-'
       ),
@@ -453,7 +453,7 @@ const ProductDetailsPage = () => {
       header: 'Employee',
       cell: (props) => (
         <span>
-          {props.row.original.employee?.name || 'Unknown'} 
+          {props.row.original.employee?.name || 'Unknown'}
           {props.row.original.employee?.empId && ` (${props.row.original.employee.empId})`}
         </span>
       ),
@@ -473,7 +473,7 @@ const ProductDetailsPage = () => {
     {
       header: 'Expected Return',
       cell: (props) => (
-        props.row.original.expectedReturnAt 
+        props.row.original.expectedReturnAt
           ? new Date(props.row.original.expectedReturnAt).toLocaleDateString()
           : '-'
       ),
@@ -481,15 +481,15 @@ const ProductDetailsPage = () => {
     {
       header: 'Returned On',
       cell: (props) => (
-        props.row.original.returnedAt 
-          ? new Date(props.row.original.returnedAt).toLocaleDateString() 
+        props.row.original.returnedAt
+          ? new Date(props.row.original.returnedAt).toLocaleDateString()
           : '-'
       ),
     },
     {
       header: 'Status',
       cell: (props) => (
-        <div className={assignmentStatusColorMap[props.row.original.status] || 'bg-gray-500'}>
+        <div className={assignmentStatusColorMap[props.row.original.status] || ''}>
           {props.row.original.status}
         </div>
       ),
@@ -498,7 +498,7 @@ const ProductDetailsPage = () => {
       header: 'Return Condition',
       cell: (props) => (
         props.row.original.returnCondition ? (
-          <div className={conditionColorMap[props.row.original.returnCondition] || 'bg-gray-500 text-white'}>
+          <div className={conditionColorMap[props.row.original.returnCondition] || ''}>
             {props.row.original.returnCondition}
           </div>
         ) : (
@@ -554,7 +554,7 @@ const ProductDetailsPage = () => {
         >
           Back to Products
         </Button>
-        
+
         <div className="flex gap-2">
           <Button
             variant="twoTone"
@@ -563,7 +563,7 @@ const ProductDetailsPage = () => {
           >
             Add Stock
           </Button>
-          
+
         </div>
       </div>
 
@@ -573,34 +573,34 @@ const ProductDetailsPage = () => {
           <div>
             <h2 className="text-2xl font-bold mb-2">{product.name}</h2>
             <p className="text-gray-600 mb-4">{product.model}</p>
-            
+
             <div className="space-y-3">
               <div>
-                <span className="font-semibold">Category:</span> 
+                <span className="font-semibold">Category:</span>
                 <span className="ml-2">{product.category?.name || '-'}</span>
               </div>
               <div>
-                <span className="font-semibold">Branch:</span> 
+                <span className="font-semibold">Branch:</span>
                 <span className="ml-2">{product.branch?.name || '-'}</span>
               </div>
               {product.department && (
                 <div>
-                  <span className="font-semibold">Department:</span> 
+                  <span className="font-semibold">Department:</span>
                   <span className="ml-2">{product.department.name}</span>
                 </div>
               )}
               {product.warrantyDuration && (
                 <div>
-                  <span className="font-semibold">Warranty Duration:</span> 
+                  <span className="font-semibold">Warranty Duration:</span>
                   <span className="ml-2">{product.warrantyDuration} months</span>
                 </div>
               )}
               <div>
-                <span className="font-semibold">Minimum Stock Level:</span> 
+                <span className="font-semibold">Minimum Stock Level:</span>
                 <span className="ml-2">{product.minStockLevel}</span>
               </div>
               <div>
-                <span className="font-semibold">Created:</span> 
+                <span className="font-semibold">Created:</span>
                 <span className="ml-2">{new Date(product.createdAt).toLocaleDateString()}</span>
               </div>
             </div>
@@ -614,7 +614,7 @@ const ProductDetailsPage = () => {
             </div>
 
             {/* Stock Statistics */}
-            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg mb-4">
+            <div className=" p-4 rounded-lg mb-4">
               <h3 className="font-semibold mb-3">Stock Overview</h3>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
@@ -644,7 +644,7 @@ const ProductDetailsPage = () => {
               </div>
             </div>
 
-            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+            <div className=" p-4 rounded-lg">
               <h3 className="font-semibold mb-2">Description</h3>
               <p className="text-gray-600 dark:text-gray-300">
                 {product.description || 'No description available'}
@@ -747,58 +747,108 @@ const ProductDetailsPage = () => {
       {/* Add Stock Dialog */}
       <Dialog
         isOpen={addStockDialog}
-        onClose={() => setAddStockDialog(false)}
+        onClose={() => {
+          setAddStockDialog(false);
+          resetStockForm();
+        }}
+        onRequestClose={() => {
+          setAddStockDialog(false);
+          resetStockForm();
+        }}
         width={500}
       >
-        <h4 className="mb-4">Add Stock to {product.name}</h4>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Quantity</label>
-            <Input
-              type="number"
-              min="1"
-              max="100"
-              value={stockForm.quantity}
-              onChange={(e) => setStockForm({...stockForm, quantity: Number(e.target.value)})}
-            />
+        <div className="max-h-[80vh] flex flex-col">
+          <h4 className="mb-4 flex-shrink-0">Add Stock</h4>
+
+          {/* Scrollable content area */}
+          <div className="flex-1 overflow-y-auto pr-2">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Product</label>
+                <p className="font-semibold">{product.name}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Quantity</label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={stockForm.quantity}
+                  onChange={(e) => {
+                    const qty = Number(e.target.value);
+                    setStockForm({
+                      ...stockForm,
+                      quantity: qty,
+                      // Adjust serial numbers array to match quantity
+                      serialNumbers: Array.from({ length: qty }, (_, i) =>
+                        stockForm.serialNumbers[i] || ''
+                      )
+                    });
+                  }}
+                />
+              </div>
+
+             
+             
+
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Serial Numbers (Optional - {stockForm.serialNumbers.filter(sn => sn.trim()).length} of {stockForm.quantity} filled)
+                </label>
+
+                {/* Show warning if many items */}
+                {stockForm.quantity > 10 && (
+                  <div className="border border-yellow-200 rounded p-2 mb-2">
+                    <p className="text-sm text-yellow-700">
+                      Large quantity detected. Consider using batch serial number format or leave empty for auto-generation.
+                    </p>
+                  </div>
+                )}
+
+                {/* Container for serial inputs with its own scroll */}
+                <div
+                  className="max-h-60 overflow-y-auto border rounded p-3 "
+                  style={{
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: '#cbd5e1 #f1f5f9'
+                  }}
+                >
+                  <div className="space-y-2">
+                    {Array.from({ length: stockForm.quantity }, (_, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500 w-8 flex-shrink-0">#{index + 1}</span>
+                        <Input
+                          type="text"
+                          placeholder={`Serial number ${index + 1}`}
+                          value={stockForm.serialNumbers[index] || ''}
+                          onChange={(e) => {
+                            const newSerialNumbers = [...stockForm.serialNumbers];
+                            newSerialNumbers[index] = e.target.value;
+                            setStockForm({ ...stockForm, serialNumbers: newSerialNumbers });
+                          }}
+                          className="flex-1"
+                          size="sm"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Leave empty for non-serialized items. Scroll within the box above for many items.
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Purchase Price per Item (Optional)</label>
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={stockForm.purchasePrice}
-              onChange={(e) => setStockForm({...stockForm, purchasePrice: e.target.value})}
-              placeholder="0.00"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Serial Numbers (Optional - {stockForm.serialNumbers.length} of {stockForm.quantity})
-            </label>
-            {Array.from({ length: stockForm.quantity }, (_, index) => (
-              <Input
-                key={index}
-                type="text"
-                placeholder={`Serial number ${index + 1}`}
-                value={stockForm.serialNumbers[index] || ''}
-                onChange={(e) => {
-                  const newSerialNumbers = [...stockForm.serialNumbers];
-                  newSerialNumbers[index] = e.target.value;
-                  setStockForm({...stockForm, serialNumbers: newSerialNumbers});
-                }}
-                className="mb-2"
-              />
-            ))}
-          </div>
-
-          <div className="flex justify-end gap-2 mt-6">
+          {/* Fixed action buttons */}
+          <div className="flex justify-end gap-2 mt-6 pt-4 border-t flex-shrink-0">
             <Button
               variant="plain"
-              onClick={() => setAddStockDialog(false)}
+              onClick={() => {
+                setAddStockDialog(false);
+                resetStockForm();
+              }}
             >
               Cancel
             </Button>

@@ -9,7 +9,7 @@ export type AppConfig = {
 
 const appConfig: AppConfig = {
     apiPrefix: 'https://dcab.igniteway.in/api',
-    // apiPrefix: 'http://localhost:4000/api',
+    // apiPrefix: 'http://localhost:4001/api',
     authenticatedEntryPath: '/home',
     unAuthenticatedEntryPath: '/sign-in',
     tourPath: '/',

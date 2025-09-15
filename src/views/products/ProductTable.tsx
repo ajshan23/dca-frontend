@@ -328,11 +328,11 @@ const ProductTable = () => {
     
     switch (stockStatus) {
       case 'OUT_OF_STOCK':
-        return <div className="text-red-600 bg-red-50 px-2 py-1 rounded text-sm">Out of Stock</div>;
+        return <div className="text-red-600 px-2 py-1 rounded text-sm">Out of Stock</div>;
       case 'LOW_STOCK':
-        return <div className="text-yellow-600 bg-yellow-50 px-2 py-1 rounded text-sm">Low Stock ({availableStock})</div>;
+        return <div className="text-yellow-600  px-2 py-1 rounded text-sm">Low Stock ({availableStock})</div>;
       default:
-        return <div className="text-green-600 bg-green-50 px-2 py-1 rounded text-sm">Available ({availableStock})</div>;
+        return <div className="text-green-600  px-2 py-1 rounded text-sm">Available ({availableStock})</div>;
     }
   };
 
@@ -377,7 +377,7 @@ const ProductTable = () => {
     {
       header: 'Compliance',
       cell: (props) => (
-        <div className={props.row.original.complianceStatus ? 'text-green-600 bg-green-50 px-2 py-1 rounded text-sm' : 'text-red-600 bg-red-50 px-2 py-1 rounded text-sm'}>
+        <div className={props.row.original.complianceStatus ? 'text-green-600 px-2 py-1 rounded text-sm' : 'text-red-600  px-2 py-1 rounded text-sm'}>
           {props.row.original.complianceStatus ? 'Compliant' : 'Non-compliant'}
         </div>
       ),

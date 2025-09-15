@@ -40,6 +40,7 @@ const EmployeeTable = () => {
             limit: pagination.limit,
             search: searchTerm
         }),
+        keepPreviousData: true
     })
 
     const debouncedSearch = useMemo(
@@ -111,6 +112,59 @@ const EmployeeTable = () => {
         },
     ], [navigate])
 
+    // Google-style pagination UI
+    const total = data?.data?.total || 0
+    const totalPages = Math.ceil(total / pagination.limit)
+
+    const renderPagination = () => {
+        if (totalPages <= 1) return null
+
+        const pages = []
+        const maxButtons = 5
+        let start = Math.max(1, pagination.page - Math.floor(maxButtons / 2))
+        let end = Math.min(totalPages, start + maxButtons - 1)
+
+        if (end - start < maxButtons - 1) {
+            start = Math.max(1, end - maxButtons + 1)
+        }
+
+        for (let i = start; i <= end; i++) {
+            pages.push(
+                <button
+                    key={i}
+                    className={`px-3 py-1 rounded-md border ${
+                        i === pagination.page
+                            ? 'bg-blue-500 text-white border-blue-500'
+                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                    }`}
+                    onClick={() => setPagination(prev => ({ ...prev, page: i }))}
+                >
+                    {i}
+                </button>
+            )
+        }
+
+        return (
+            <div className="flex items-center gap-2 mt-4">
+                <button
+                    disabled={pagination.page === 1}
+                    className="px-3 py-1 rounded-md border border-gray-300 bg-white text-gray-700 disabled:opacity-50"
+                    onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                >
+                    Prev
+                </button>
+                {pages}
+                <button
+                    disabled={pagination.page === totalPages}
+                    className="px-3 py-1 rounded-md border border-gray-300 bg-white text-gray-700 disabled:opacity-50"
+                    onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                >
+                    Next
+                </button>
+            </div>
+        )
+    }
+
     if (error) {
         return (
             <div className="flex items-center justify-center h-full">
@@ -136,14 +190,11 @@ const EmployeeTable = () => {
                 columns={columns}
                 data={data?.data?.data || []}
                 loading={isLoading}
-                pagingData={{
-                    total: data?.data?.total || 0,
-                    pageIndex: pagination.page,
-                    pageSize: pagination.limit,
-                }}
-                onPaginationChange={(page) => setPagination(prev => ({ ...prev, page }))}
                 onSelectChange={(limit) => setPagination({ page: 1, limit })}
             />
+
+            {/* Google-like pagination */}
+            {renderPagination()}
         </>
     )
 }

@@ -8,6 +8,7 @@ import { HiOutlineLogout, HiOutlineUser } from 'react-icons/hi'
 import type { CommonProps } from '@/@types/common'
 import { useEffect, useState, type JSX } from 'react'
 import { apiGetMe } from '@/services/UserService'
+import { FiSettings } from 'react-icons/fi'
 
 type DropdownList = {
     label: string
@@ -59,6 +60,17 @@ const _UserDropdown = ({ className }: CommonProps) => {
                             
                         </div>
                     </div>
+                </Dropdown.Item>
+                <Dropdown.Item variant="header">
+                    <Link to="/settings" className="py-2 px-3 flex items-center gap-2">
+                       <FiSettings />
+                        <div>
+                            <div className="font-semibold ">
+                               Settings
+                            </div>
+                            
+                        </div>
+                    </Link>
                 </Dropdown.Item>
                 <Dropdown.Item variant="divider" />
                 {dropdownItemList.map((item) => (

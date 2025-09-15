@@ -11,7 +11,8 @@ import {
     HiOutlineCube,
     HiOutlineClipboardList,
     HiOutlineCollection,
-    HiOutlineChartSquareBar
+    HiOutlineChartSquareBar,
+    HiOutlineDownload
 } from 'react-icons/hi'
 import type { JSX } from 'react'
 
@@ -31,7 +32,8 @@ const navigationIcon: NavigationIcons = {
     products: <HiOutlineCube />,
     assignments: <HiOutlineClipboardList />,
     departments: <HiOutlineCollection />,
-    productAssignments: <HiOutlineChartSquareBar />
+    productAssignments: <HiOutlineChartSquareBar />,
+    export: <HiOutlineDownload />
 }
 
 export default navigationIcon

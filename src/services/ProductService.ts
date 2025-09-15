@@ -333,6 +333,22 @@ export const apiGenerateAssignmentQrCode = async (assignmentId: number) => {
         method: 'get'
     })
 }
+export const apiExportProductsToExcel = async (params?: Record<string, any>) => {
+  return ApiService.fetchData({
+    url: '/products/export/excel',
+    method: 'get',
+    params,
+    responseType: 'blob' // Important for file downloads
+  });
+};
+export const apiExportAssignmentsToExcel = async (params?: Record<string, any>) => {
+  return ApiService.fetchData({
+    url: '/product-assignments/export/excel',
+    method: 'get',
+    params,
+    responseType: 'blob' // Important for file downloads
+  });
+};
 export default {
   apiGetProducts,
   apiGetProductById,

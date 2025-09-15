@@ -7,7 +7,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import debounce from 'lodash/debounce';
 import Input from '@/components/ui/Input';
 import { apiGetActiveAssignments, apiReturnProduct } from '@/services/ProductService';
-import Badge from '@/components/ui/Badge';
 import { Button, Dialog, Notification, toast, Select } from '@/components/ui';
 import { HiOutlineCheckCircle } from 'react-icons/hi';
 import { MdAssignmentReturn } from 'react-icons/md';
@@ -151,9 +150,9 @@ const AssignmentListTable = () => {
 
   const getStatusBadge = (assignment: Assignment) => {
     if (assignment.isOverdue) {
-      return <Badge className="w-fit bg-red-500 text-white">Overdue ({assignment.daysOverdue} days)</Badge>;
+      return <div className="w-fit  text-white">Overdue ({assignment.daysOverdue} days)</div>;
     }
-    return <Badge className="w-fit bg-blue-500 text-white">Assigned</Badge>;
+    return <div className="w-fit  text-white">Assigned</div>;
   };
 
   const columns: ColumnDef<Assignment>[] = useMemo(() => [
@@ -171,9 +170,9 @@ const AssignmentListTable = () => {
       cell: (props) => (
         <div>
           <span className="block">{props.row.original.inventory.serialNumber || `Item #${props.row.original.inventory.id}`}</span>
-          <Badge className="text-xs bg-gray-100 text-gray-700 mt-1">
+          <div className="text-xs  text-gray-700 mt-1">
             {props.row.original.inventory.condition}
-          </Badge>
+          </div>
         </div>
       ),
     },
