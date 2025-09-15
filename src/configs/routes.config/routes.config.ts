@@ -163,6 +163,12 @@ export const protectedRoutes = [
        component: lazy(() => import('@/views/export/ExportPage')),
        authority:[]
     },
+      {
+        key:"product",
+        path:"/product-public-view/:assignmentId",
+       component: lazy(() => import('@/views/public/PublicInventoryView')),
+       authority:[]
+    },
     /** Example purpose only, please remove */
     {
         key: 'singleMenuItem',
