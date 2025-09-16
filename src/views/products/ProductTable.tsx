@@ -67,6 +67,22 @@ interface InventoryItem {
   };
 }
 
+interface Employee {
+  id: number;
+  empId: string;
+  name: string;
+  email: string;
+  department: string;
+  position: string;
+  branch: {
+    id: number;
+    name: string;
+  };
+  _count: {
+    assignments: number;
+  };
+}
+
 const ProductTable = () => {
   const tableRef = useRef<DataTableResetHandle>(null);
   const navigate = useNavigate();
@@ -98,6 +114,7 @@ const ProductTable = () => {
   const [selectedInventoryId, setSelectedInventoryId] = useState<number | null>(null);
   const [stockQuantity, setStockQuantity] = useState(1);
   const [stockSerialNumbers, setStockSerialNumbers] = useState<string[]>(['']);
+  const [employeeSearchTerm, setEmployeeSearchTerm] = useState('');
 
   const { 
     data: productsResponse, 
@@ -114,13 +131,15 @@ const ProductTable = () => {
     }),
   });
 
-  const { data: employeesResponse } = useQuery<ApiResponse<any>>({
-    queryKey: ['employees-for-assignment'],
+  const { data: employeesResponse, refetch: refetchEmployees } = useQuery<ApiResponse<Employee[]>>({
+    queryKey: ['employees-for-assignment', employeeSearchTerm],
     queryFn: () => apiGetEmployees({ 
       page: 1, 
       limit: 100,
+      search: employeeSearchTerm,
       status: 'active'
-    })
+    }),
+    enabled: assignDialogOpen, // Only fetch when dialog is open
   });
 
   const assignMutation = useMutation({
@@ -197,6 +216,13 @@ const ProductTable = () => {
     []
   );
 
+  const debouncedEmployeeSearch = useMemo(
+    () => debounce((value: string) => {
+      setEmployeeSearchTerm(value);
+    }, 300),
+    []
+  );
+
   const resetAssignmentForm = () => {
     setSelectedProduct(null);
     setSelectedEmployee(null);
@@ -204,6 +230,7 @@ const ProductTable = () => {
     setExpectedReturnDate(null);
     setNotes('');
     setAvailableInventory([]);
+    setEmployeeSearchTerm('');
     setAssignDialogOpen(false);
   };
 
@@ -302,9 +329,10 @@ const ProductTable = () => {
   };
 
   const employeeOptions = useMemo(() => {
-    return employeesResponse?.data?.data?.map((emp: any) => ({
+    return employeesResponse?.data?.data?.map((emp: Employee) => ({
       value: emp.id,
-      label: `${emp.name} (${emp.empId})`
+      label: `${emp.name} (${emp.empId}) - ${emp.department}`,
+      employee: emp
     })) || [];
   }, [employeesResponse]);
 
@@ -501,7 +529,7 @@ const ProductTable = () => {
             <div>
               <label className="block text-sm font-medium mb-1">Employee</label>
               <Select
-                placeholder="Select Employee"
+                placeholder="Search and select employee"
                 options={employeeOptions}
                 value={selectedEmployee ? 
                   { 
@@ -509,7 +537,13 @@ const ProductTable = () => {
                     label: employeeOptions.find(e => e.value === selectedEmployee)?.label 
                   } : null}
                 onChange={(option: any) => setSelectedEmployee(option?.value)}
+                onInputChange={(value) => debouncedEmployeeSearch(value)}
+                isSearchable
+                isLoading={!employeesResponse}
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Type to search employees by name, ID, or email
+              </p>
             </div>
 
             {availableInventory.length > 0 && (
