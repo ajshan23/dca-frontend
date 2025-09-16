@@ -157,6 +157,8 @@ export const apiUpdateInventoryItem = async (inventoryId: number, data: {
   });
 };
 
+// Add these to your existing API service functions
+
 export const apiDeleteInventoryItem = async (inventoryId: number, data?: {
   reason?: string;
   permanent?: boolean;
@@ -164,6 +166,18 @@ export const apiDeleteInventoryItem = async (inventoryId: number, data?: {
   return ApiService.fetchData({
     url: `/products/inventory/${inventoryId}`,
     method: 'delete',
+    data
+  });
+};
+
+export const apiBulkDeleteInventoryItems = async (data: {
+  inventoryIds: number[];
+  reason?: string;
+  permanent?: boolean;
+}) => {
+  return ApiService.fetchData({
+    url: '/products/inventory/bulk-delete',
+    method: 'post',
     data
   });
 };

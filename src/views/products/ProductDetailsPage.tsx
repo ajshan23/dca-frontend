@@ -5,7 +5,9 @@ import {
   apiGenerateProductQrCode,
   apiAddStock,
   apiUpdateInventoryItem,
-  apiGenerateAssignmentQrCode
+  apiGenerateAssignmentQrCode,
+  apiDeleteInventoryItem,
+  apiBulkDeleteInventoryItems
 } from '@/services/ProductService';
 import {
   Button,
@@ -14,11 +16,12 @@ import {
   toast,
   Dialog,
   Input,
-  Select
+  Select,
+  Checkbox
 } from '@/components/ui';
 import DataTable from '@/components/shared/DataTable';
 import type { ColumnDef } from '@/components/shared/DataTable';
-import { HiOutlineArrowLeft, HiOutlinePrinter, HiOutlinePlus, HiOutlinePencil, HiOutlineSearch, HiOutlineQrcode } from 'react-icons/hi';
+import { HiOutlineArrowLeft, HiOutlinePrinter, HiOutlinePlus, HiOutlinePencil, HiOutlineSearch, HiOutlineQrcode, HiOutlineTrash } from 'react-icons/hi';
 import { useNavigate } from 'react-router-dom';
 import { MdAssignment, MdInventory } from 'react-icons/md';
 import { BiBox } from 'react-icons/bi';
@@ -126,7 +129,10 @@ const ProductDetailsPage = () => {
   // Dialog states
   const [addStockDialog, setAddStockDialog] = useState(false);
   const [editInventoryDialog, setEditInventoryDialog] = useState(false);
+  const [deleteInventoryDialog, setDeleteInventoryDialog] = useState(false);
+  const [bulkDeleteDialog, setBulkDeleteDialog] = useState(false);
   const [selectedInventory, setSelectedInventory] = useState<InventoryItem | null>(null);
+  const [selectedInventoryIds, setSelectedInventoryIds] = useState<number[]>([]);
   const [stockForm, setStockForm] = useState({
     quantity: 1,
     serialNumbers: [''],
@@ -234,6 +240,48 @@ const ProductDetailsPage = () => {
     }
   });
 
+  const { mutate: deleteInventory, isPending: isDeletingInventory } = useMutation({
+    mutationFn: (inventoryId: number) => apiDeleteInventoryItem(inventoryId),
+    onSuccess: (response) => {
+      toast.push(
+        <Notification title="Success" type="success">
+          {response.data?.message || 'Inventory item deleted successfully'}
+        </Notification>
+      );
+      refetch();
+      setDeleteInventoryDialog(false);
+      setSelectedInventory(null);
+    },
+    onError: (error: any) => {
+      toast.push(
+        <Notification title="Error" type="danger">
+          {error.response?.data?.message || 'Failed to delete inventory item'}
+        </Notification>
+      );
+    }
+  });
+
+  const { mutate: bulkDeleteInventory, isPending: isBulkDeletingInventory } = useMutation({
+    mutationFn: (inventoryIds: number[]) => apiBulkDeleteInventoryItems({ inventoryIds }),
+    onSuccess: (response) => {
+      toast.push(
+        <Notification title="Success" type="success">
+          {response.data?.message || 'Selected inventory items deleted successfully'}
+        </Notification>
+      );
+      refetch();
+      setBulkDeleteDialog(false);
+      setSelectedInventoryIds([]);
+    },
+    onError: (error: any) => {
+      toast.push(
+        <Notification title="Error" type="danger">
+          {error.response?.data?.message || 'Failed to delete inventory items'}
+        </Notification>
+      );
+    }
+  });
+
   const handlePrintQrCode = (qrCodeData: string) => {
     const printWindow = window.open('', '_blank', 'width=600,height=600');
     if (printWindow && product) {
@@ -260,17 +308,11 @@ const ProductDetailsPage = () => {
             </style>
           </head>
           <body>
-            <h2>${product.name} QR Code</h2>
-            <div class="product-info">
-              <p><strong>Model:</strong> ${product.model}</p>
-              <p><strong>ID:</strong> ${product.id}</p>
-            </div>
+            
             <div class="qr-container">
               <img src="${qrCodeData}" alt="QR Code" />
             </div>
-            <script>
-              setTimeout(() => { window.print(); window.close(); }, 300);
-            </script>
+            
           </body>
         </html>
       `);
@@ -308,21 +350,11 @@ const ProductDetailsPage = () => {
             </style>
           </head>
           <body>
-            <h2>Assignment QR Code</h2>
-            <div class="assignment-info">
-              <div class="info-row"><strong>Product:</strong> ${assignmentInfo.productName}</div>
-              <div class="info-row"><strong>Assigned To:</strong> ${assignmentInfo.employeeName}</div>
-              <div class="info-row"><strong>Assigned On:</strong> ${new Date(assignmentInfo.assignedAt).toLocaleDateString()}</div>
-              <div class="info-row"><strong>Status:</strong> ${assignmentInfo.status}</div>
-              ${assignmentInfo.expectedReturnAt ?
-          `<div class="info-row"><strong>Expected Return:</strong> ${new Date(assignmentInfo.expectedReturnAt).toLocaleDateString()}</div>` : ''}
-            </div>
+           
             <div class="qr-container">
               <img src="${qrCodeData}" alt="Assignment QR Code" />
             </div>
-            <script>
-              setTimeout(() => { window.print(); window.close(); }, 300);
-            </script>
+          
           </body>
         </html>
       `);
@@ -356,6 +388,23 @@ const ProductDetailsPage = () => {
     setEditInventoryDialog(true);
   };
 
+  const handleDeleteInventory = (item: InventoryItem) => {
+    setSelectedInventory(item);
+    setDeleteInventoryDialog(true);
+  };
+
+  const handleBulkDeleteInventory = () => {
+    if (selectedInventoryIds.length === 0) {
+      toast.push(
+        <Notification title="Warning" type="warning">
+          Please select at least one inventory item to delete
+        </Notification>
+      );
+      return;
+    }
+    setBulkDeleteDialog(true);
+  };
+
   const handleUpdateInventorySubmit = () => {
     if (!selectedInventory) return;
 
@@ -370,6 +419,38 @@ const ProductDetailsPage = () => {
         reason: 'Manual inventory update'
       }
     });
+  };
+
+  const handleDeleteInventorySubmit = () => {
+    if (!selectedInventory) return;
+    deleteInventory(selectedInventory.id);
+  };
+
+  const handleBulkDeleteSubmit = () => {
+    if (selectedInventoryIds.length === 0) return;
+    bulkDeleteInventory(selectedInventoryIds);
+  };
+
+  const handleSelectAllInventoryItems = (checked: boolean) => {
+    if (!product?.inventory) return;
+
+    if (checked) {
+      // Select all non-assigned items
+      const availableIds = product.inventory
+        .filter(item => item.status !== 'ASSIGNED')
+        .map(item => item.id);
+      setSelectedInventoryIds(availableIds);
+    } else {
+      setSelectedInventoryIds([]);
+    }
+  };
+
+  const handleSelectInventoryItem = (id: number, checked: boolean) => {
+    if (checked) {
+      setSelectedInventoryIds(prev => [...prev, id]);
+    } else {
+      setSelectedInventoryIds(prev => prev.filter(itemId => itemId !== id));
+    }
   };
 
   // Extract product data from response structure
@@ -404,13 +485,40 @@ const ProductDetailsPage = () => {
     });
   }, [product?.inventory, inventorySearch]);
 
+  // Get selected items count
+  const selectedItemsCount = selectedInventoryIds.length;
+
   // Table columns for inventory
   const inventoryColumns: ColumnDef<InventoryItem>[] = [
     {
+      id: 'select',
+      header: () => (
+        <div className="flex items-center">
+          <Checkbox
+            checked={selectedItemsCount > 0 && selectedItemsCount === filteredInventoryData.filter(item => item.status !== 'ASSIGNED').length}
+            indeterminate={selectedItemsCount > 0 && selectedItemsCount < filteredInventoryData.filter(item => item.status !== 'ASSIGNED').length}
+            onChange={handleSelectAllInventoryItems}
+            disabled={filteredInventoryData.filter(item => item.status !== 'ASSIGNED').length === 0}
+          />
+          {/* <span className="ml-2">Select</span> */}
+        </div>
+      ),
+      cell: (props) => (
+        <Checkbox
+          checked={selectedInventoryIds.includes(props.row.original.id)}
+          onChange={(checked) => handleSelectInventoryItem(props.row.original.id, checked)}
+          disabled={props.row.original.status === 'ASSIGNED'}
+        />
+      ),
+      width: 80,
+    },
+    {
+      id: 'serialNumber',
       header: 'Serial Number',
       cell: (props) => props.row.original.serialNumber || `Item #${props.row.original.id}`,
     },
     {
+      id: 'status',
       header: 'Status',
       cell: (props) => (
         <div className={statusColorMap[props.row.original.status] || ''}>
@@ -419,6 +527,7 @@ const ProductDetailsPage = () => {
       ),
     },
     {
+      id: 'condition',
       header: 'Condition',
       cell: (props) => (
         <div className={conditionColorMap[props.row.original.condition] || ''}>
@@ -427,6 +536,7 @@ const ProductDetailsPage = () => {
       ),
     },
     {
+      id: 'purchaseDate',
       header: 'Purchase Date',
       cell: (props) => (
         props.row.original.purchaseDate
@@ -435,14 +545,27 @@ const ProductDetailsPage = () => {
       ),
     },
     {
+      id: 'actions',
       header: 'Actions',
       cell: (props) => (
-        <Button
-          size="xs"
-          icon={<HiOutlinePencil />}
-          onClick={() => handleEditInventory(props.row.original)}
-          disabled={props.row.original.status === 'ASSIGNED'}
-        />
+        <div className="flex space-x-1">
+          <Button
+            size="xs"
+            icon={<HiOutlinePencil />}
+            onClick={() => handleEditInventory(props.row.original)}
+            disabled={props.row.original.status === 'ASSIGNED'}
+            title="Edit"
+          />
+          <Button
+            size="xs"
+            icon={<HiOutlineTrash />}
+            onClick={() => handleDeleteInventory(props.row.original)}
+            disabled={props.row.original.status === 'ASSIGNED'}
+            variant="solid"
+            color="red"
+            title="Delete"
+          />
+        </div>
       ),
     },
   ];
@@ -450,6 +573,7 @@ const ProductDetailsPage = () => {
   // Table columns for assignments
   const assignmentColumns: ColumnDef<Assignment>[] = [
     {
+      id: 'employee',
       header: 'Employee',
       cell: (props) => (
         <span>
@@ -459,6 +583,7 @@ const ProductDetailsPage = () => {
       ),
     },
     {
+      id: 'inventoryItem',
       header: 'Inventory Item',
       cell: (props) => (
         <span>
@@ -467,10 +592,12 @@ const ProductDetailsPage = () => {
       ),
     },
     {
+      id: 'assignedOn',
       header: 'Assigned On',
       cell: (props) => new Date(props.row.original.assignedAt).toLocaleDateString(),
     },
     {
+      id: 'expectedReturn',
       header: 'Expected Return',
       cell: (props) => (
         props.row.original.expectedReturnAt
@@ -479,6 +606,7 @@ const ProductDetailsPage = () => {
       ),
     },
     {
+      id: 'returnedOn',
       header: 'Returned On',
       cell: (props) => (
         props.row.original.returnedAt
@@ -487,6 +615,7 @@ const ProductDetailsPage = () => {
       ),
     },
     {
+      id: 'assignmentStatus',
       header: 'Status',
       cell: (props) => (
         <div className={assignmentStatusColorMap[props.row.original.status] || ''}>
@@ -495,6 +624,7 @@ const ProductDetailsPage = () => {
       ),
     },
     {
+      id: 'returnCondition',
       header: 'Return Condition',
       cell: (props) => (
         props.row.original.returnCondition ? (
@@ -507,10 +637,12 @@ const ProductDetailsPage = () => {
       ),
     },
     {
+      id: 'assignedBy',
       header: 'Assigned By',
       cell: (props) => props.row.original.assignedBy?.username || 'Unknown',
     },
     {
+      id: 'assignmentActions',
       header: 'Actions',
       cell: (props) => (
         <Button
@@ -660,6 +792,24 @@ const ProductDetailsPage = () => {
           <div className="flex items-center gap-2">
             <MdInventory />
             <h3 className="text-xl font-semibold">Inventory Items</h3>
+            {selectedItemsCount > 0 && (
+              <span className="text-sm text-blue-600 bg-blue-100 px-2 py-1 rounded">
+                {selectedItemsCount} item{selectedItemsCount !== 1 ? 's' : ''} selected
+              </span>
+            )}
+          </div>
+          <div className="flex gap-">
+            {selectedItemsCount > 0 && (
+              <Button
+                variant="solid"
+                color="red"
+                icon={<HiOutlineTrash />}
+                onClick={handleBulkDeleteInventory}
+                disabled={selectedItemsCount === 0}
+              >
+                Delete Selected ({selectedItemsCount})
+              </Button>
+            )}
           </div>
         </div>
 
@@ -721,6 +871,11 @@ const ProductDetailsPage = () => {
           <DataTable
             columns={inventoryColumns}
             data={filteredInventoryData}
+            pagingData={{
+              total: filteredInventoryData.length,
+              pageIndex: 1,
+              pageSize: filteredInventoryData.length,
+            }}
           />
         )}
       </Card>
@@ -740,6 +895,11 @@ const ProductDetailsPage = () => {
           <DataTable
             columns={assignmentColumns}
             data={product.assignments}
+            pagingData={{
+              total: product.assignments.length,
+              pageIndex: 1,
+              pageSize: product.assignments.length,
+            }}
           />
         )}
       </Card>
@@ -788,9 +948,6 @@ const ProductDetailsPage = () => {
                   }}
                 />
               </div>
-
-             
-             
 
               <div>
                 <label className="block text-sm font-medium mb-1">
@@ -864,7 +1021,7 @@ const ProductDetailsPage = () => {
         </div>
       </Dialog>
 
-      {/* Edit Inventory Dialog - Updated with Serial Number field */}
+      {/* Edit Inventory Dialog */}
       <Dialog
         isOpen={editInventoryDialog}
         onClose={() => setEditInventoryDialog(false)}
@@ -952,6 +1109,107 @@ const ProductDetailsPage = () => {
             </div>
           </div>
         )}
+      </Dialog>
+
+      {/* Delete Inventory Dialog */}
+      <Dialog
+        isOpen={deleteInventoryDialog}
+        onClose={() => setDeleteInventoryDialog(false)}
+        width={400}
+      >
+        <h4 className="mb-4">Delete Inventory Item</h4>
+        {selectedInventory && (
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              Are you sure you want to delete this inventory item?
+            </p>
+            <div className="bg-gray-50 p-3 rounded">
+              <p className="font-medium">
+                {selectedInventory.serialNumber || `Item #${selectedInventory.id}`}
+              </p>
+              <p className="text-sm text-gray-500">
+                Status: {selectedInventory.status} | Condition: {selectedInventory.condition}
+              </p>
+            </div>
+            <p className="text-sm text-red-500">
+              Warning: This action cannot be undone. Any assignment history associated with this item will be preserved.
+            </p>
+
+            <div className="flex justify-end gap-2 mt-6">
+              <Button
+                variant="plain"
+                onClick={() => setDeleteInventoryDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="solid"
+                color="red"
+                onClick={handleDeleteInventorySubmit}
+                loading={isDeletingInventory}
+                icon={<HiOutlineTrash />}
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+        )}
+      </Dialog>
+
+      {/* Bulk Delete Inventory Dialog */}
+      <Dialog
+        isOpen={bulkDeleteDialog}
+        onClose={() => setBulkDeleteDialog(false)}
+        width={500}
+      >
+        <h4 className="mb-4">Delete Selected Inventory Items</h4>
+        <div className="space-y-4">
+          <p className="text-gray-600">
+            Are you sure you want to delete {selectedItemsCount} selected inventory item{selectedItemsCount !== 1 ? 's' : ''}?
+          </p>
+
+          {selectedItemsCount > 0 && (
+            <div className="bg-gray-50 p-3 rounded max-h-40 overflow-y-auto">
+              <p className="font-medium mb-2">Selected Items:</p>
+              <ul className="text-sm text-gray-500 list-disc list-inside">
+                {filteredInventoryData
+                  .filter(item => selectedInventoryIds.includes(item.id))
+                  .slice(0, 10) // Show only first 10 to avoid overflow
+                  .map(item => (
+                    <li key={item.id}>
+                      {item.serialNumber || `Item #${item.id}`} ({item.status})
+                    </li>
+                  ))
+                }
+                {selectedItemsCount > 10 && (
+                  <li>...and {selectedItemsCount - 10} more</li>
+                )}
+              </ul>
+            </div>
+          )}
+
+          <p className="text-sm text-red-500">
+            Warning: This action cannot be undone. Any assignment history associated with these items will be preserved.
+          </p>
+
+          <div className="flex justify-end gap-2 mt-6">
+            <Button
+              variant="plain"
+              onClick={() => setBulkDeleteDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="solid"
+              color="red"
+              onClick={handleBulkDeleteSubmit}
+              loading={isBulkDeletingInventory}
+              icon={<HiOutlineTrash />}
+            >
+              Delete {selectedItemsCount} Item{selectedItemsCount !== 1 ? 's' : ''}
+            </Button>
+          </div>
+        </div>
       </Dialog>
     </div>
   );

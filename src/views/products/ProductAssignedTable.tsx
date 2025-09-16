@@ -1,12 +1,12 @@
 import { useState, useMemo, useRef } from 'react';
 import DataTable from '@/components/shared/DataTable';
-import { HiOutlineEye, HiOutlineRefresh } from 'react-icons/hi';
+import { HiOutlineEye, HiOutlineRefresh, HiOutlineQrcode } from 'react-icons/hi';
 import { useNavigate } from 'react-router-dom';
 import type { DataTableResetHandle, ColumnDef } from '@/components/shared/DataTable';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import debounce from 'lodash/debounce';
 import Input from '@/components/ui/Input';
-import { apiGetActiveAssignments, apiReturnProduct } from '@/services/ProductService';
+import { apiGetActiveAssignments, apiReturnProduct, apiGenerateAssignmentQrCode } from '@/services/ProductService';
 import { Button, Dialog, Notification, toast, Select } from '@/components/ui';
 import { HiOutlineCheckCircle } from 'react-icons/hi';
 import { MdAssignmentReturn } from 'react-icons/md';
@@ -100,6 +100,30 @@ const AssignmentListTable = () => {
     }
   });
 
+  // QR Code generation mutation
+  const { mutate: generateAssignmentQr, isPending: isGeneratingAssignmentQr } = useMutation({
+    mutationFn: async (assignmentId: number) => {
+      const response = await apiGenerateAssignmentQrCode(assignmentId);
+      if (!response.data?.qrCode) {
+        throw new Error('Invalid QR code data received from server');
+      }
+      return {
+        qrCode: response.data.qrCode,
+        assignmentInfo: response.data.assignmentInfo
+      };
+    },
+    onSuccess: (data) => {
+      handlePrintAssignmentQrCode(data.qrCode, data.assignmentInfo);
+    },
+    onError: (error: Error) => {
+      toast.push(
+        <Notification title="Error" type="danger">
+          {error.message || 'Failed to generate assignment QR code'}
+        </Notification>
+      );
+    }
+  });
+
   // Helper functions
   const showNotification = (message: string, type: 'success' | 'danger') => {
     toast.push(<Notification title={type === 'success' ? 'Success' : 'Error'} type={type}>{message}</Notification>);
@@ -148,11 +172,52 @@ const AssignmentListTable = () => {
     });
   };
 
+  const handlePrintAssignmentQrCode = (qrCodeData: string, assignmentInfo: any) => {
+    const printWindow = window.open('', '_blank', 'width=600,height=700');
+    if (printWindow) {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Assignment QR Code - ${assignmentInfo.productName}</title>
+            <style>
+              body { 
+                font-family: Arial, sans-serif;
+                text-align: center;
+                padding: 20px;
+              }
+              .qr-container {
+                margin: 20px auto;
+                width: 300px;
+                height: 300px;
+              }
+              .assignment-info {
+                margin-bottom: 20px;
+                text-align: left;
+              }
+              .info-row {
+                margin-bottom: 8px;
+              }
+              img { width: 100%; height: auto; }
+            </style>
+          </head>
+          <body>
+            <div class="qr-container">
+              <img src="${qrCodeData}" alt="Assignment QR Code" />
+            </div>
+         
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
+  };
+
   const getStatusBadge = (assignment: Assignment) => {
     if (assignment.isOverdue) {
-      return <div className="w-fit  text-white">Overdue ({assignment.daysOverdue} days)</div>;
+      return <div className="w-fit text-white">Overdue ({assignment.daysOverdue} days)</div>;
     }
-    return <div className="w-fit  text-white">Assigned</div>;
+    return <div className="w-fit text-white">Assigned</div>;
   };
 
   const columns: ColumnDef<Assignment>[] = useMemo(() => [
@@ -170,7 +235,7 @@ const AssignmentListTable = () => {
       cell: (props) => (
         <div>
           <span className="block">{props.row.original.inventory.serialNumber || `Item #${props.row.original.inventory.id}`}</span>
-          <div className="text-xs  text-gray-700 mt-1">
+          <div className="text-xs text-gray-700 mt-1">
             {props.row.original.inventory.condition}
           </div>
         </div>
@@ -201,27 +266,8 @@ const AssignmentListTable = () => {
       header: 'Assigned At',
       cell: (props) => new Date(props.row.original.assignedAt).toLocaleDateString(),
     },
-    {
-      header: 'Expected Return',
-      cell: (props) => (
-        <div>
-          {props.row.original.expectedReturnAt ? (
-            <div>
-              <span className="block">{new Date(props.row.original.expectedReturnAt).toLocaleDateString()}</span>
-              {props.row.original.isOverdue && (
-                <span className="text-xs text-red-500">Overdue</span>
-              )}
-            </div>
-          ) : (
-            '-'
-          )}
-        </div>
-      ),
-    },
-    {
-      header: 'Status',
-      cell: (props) => getStatusBadge(props.row.original),
-    },
+   
+  
     {
       header: 'Actions',
       id: 'action',
@@ -234,6 +280,15 @@ const AssignmentListTable = () => {
               size="xs"
               icon={<HiOutlineEye />}
               onClick={() => navigate(`/products/view/${assignment.product.id}`)}
+              title="View Product"
+            />
+            <Button
+              size="xs"
+              variant="twoTone"
+              icon={<HiOutlineQrcode />}
+              onClick={() => generateAssignmentQr(assignment.id)}
+              loading={isGeneratingAssignmentQr}
+              title="Generate QR Code"
             />
             <Button
               size="xs"
@@ -247,7 +302,7 @@ const AssignmentListTable = () => {
         );
       },
     },
-  ], [navigate]);
+  ], [navigate, generateAssignmentQr, isGeneratingAssignmentQr]);
 
   if (error) {
     return (
