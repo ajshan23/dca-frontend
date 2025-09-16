@@ -568,14 +568,6 @@ const ProductTable = () => {
               </div>
             )}
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Expected Return Date (Optional)</label>
-              <DatePicker
-                placeholder="Select date"
-                value={expectedReturnDate}
-                onChange={(date) => setExpectedReturnDate(date)}
-              />
-            </div>
 
             <div>
               <label className="block text-sm font-medium mb-1">Notes (Optional)</label>
