@@ -262,10 +262,10 @@ const AssignmentListTable = () => {
     //   header: 'Assigned By',
     //   cell: (props) => props.row.original.assignedBy.username,
     // },
-    // {
-    //   header: 'Assigned At',
-    //   cell: (props) => new Date(props.row.original.assignedAt).toLocaleDateString(),
-    // },
+    {
+      header: 'Assigned On',
+      cell: (props) => new Date(props.row.original.assignedAt).toLocaleDateString(),
+    },
    
   
     {
@@ -279,7 +279,7 @@ const AssignmentListTable = () => {
             <Button
               size="xs"
               icon={<HiOutlineEye />}
-              onClick={() => navigate(`/products/view/${assignment.product.id}`)}
+              onClick={() => navigate(`/assignments/${assignment.id}`)}
               title="View Product"
             />
             <Button
