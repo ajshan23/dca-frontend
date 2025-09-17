@@ -121,6 +121,12 @@ export const protectedRoutes = [
         authority: [ADMIN,SUPERADMIN,USER],
     },
     {
+        key: 'product Assignment',
+        path: '/assignments/:id',
+        component: lazy(() => import('@/views/products/AssignmentDetailsPage')),
+        authority: [ADMIN,SUPERADMIN,USER],
+    },
+    {
         key: 'productAssignmentHistory',
         path: '/product-assignments/history/:productId?',
         component: lazy(() => import('@/views/products/ProductAssignmentHistory')),

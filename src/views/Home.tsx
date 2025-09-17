@@ -10,7 +10,7 @@ import { apiGetStockSummary, apiGetAssignmentAnalytics } from '@/services/Produc
 import { apiGetActiveAssignments } from '@/services/ProductService'
 import { ClipLoader } from 'react-spinners'
 import { HiOutlineExclamation, HiOutlineCheckCircle, HiOutlineClock } from 'react-icons/hi'
-import { BiBox, BiUser, BiTrendingUp } from 'react-icons/bi'
+import { BiBox, BiCategory } from 'react-icons/bi'
 import { MdInventory, MdAssignment } from 'react-icons/md'
 
 interface StockSummary {
@@ -23,11 +23,18 @@ interface StockSummary {
     DAMAGED?: number;
     RETIRED?: number;
   };
+  stockByCategory: Array<{
+    categoryId: number;
+    categoryName: string;
+    productCount: number;
+    availableStock: number;
+  }>;
   lowStockCount: number;
   lowStockProducts: Array<{
     id: number;
     name: string;
     model: string;
+    category: string;
     currentStock: number;
     minStock: number;
   }>;
@@ -36,10 +43,12 @@ interface StockSummary {
     type: string;
     reason: string;
     createdAt: string;
+    performedBy: string;
     inventory: {
       product: {
         name: string;
         model: string;
+        category: string;
       };
     };
   }>;
@@ -80,7 +89,6 @@ const ProductDashboard = () => {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
 
-  // Get current user from localStorage on component mount
   useEffect(() => {
     const userData = localStorage.getItem('user');
     if (userData) {
@@ -92,7 +100,6 @@ const ProductDashboard = () => {
     }
   }, []);
 
-  // Fetch stock summary data
   const {
     data: stockSummaryResponse,
     isLoading: isLoadingStock,
@@ -102,7 +109,6 @@ const ProductDashboard = () => {
     queryFn: apiGetStockSummary
   });
 
-  // Fetch recent assignments
   const {
     data: assignmentsResponse,
     isLoading: isLoadingAssignments
@@ -111,7 +117,6 @@ const ProductDashboard = () => {
     queryFn: () => apiGetActiveAssignments({ page: 1, limit: 5 })
   });
 
-  // Fetch assignment analytics
   const {
     data: analyticsResponse,
     isLoading: isLoadingAnalytics
@@ -120,18 +125,23 @@ const ProductDashboard = () => {
     queryFn: () => apiGetAssignmentAnalytics()
   });
 
-  // Fixed data extraction - handle nested data structure
   const stockSummary: StockSummary | null = stockSummaryResponse?.data?.data || stockSummaryResponse?.data;
   const recentAssignments: Assignment[] = assignmentsResponse?.data?.data?.data || assignmentsResponse?.data?.data || [];
   const analytics = analyticsResponse?.data?.data || analyticsResponse?.data;
 
   const isLoading = isLoadingStock || isLoadingAssignments || isLoadingAnalytics;
 
-  // Debug logging
-  useEffect(() => {
-    console.log('Stock Summary Response:', stockSummaryResponse);
-    console.log('Extracted Stock Summary:', stockSummary);
-  }, [stockSummaryResponse, stockSummary]);
+  const stockStatusData = {
+    data: Object.values(stockSummary?.stockByStatus || {}),
+    labels: Object.keys(stockSummary?.stockByStatus || {})
+  };
+
+  const categoryChartData = {
+    data: stockSummary?.stockByCategory?.map(item => item.availableStock) || [],
+    labels: stockSummary?.stockByCategory?.map(item => item.categoryName) || []
+  };
+
+  const overdueAssignments = recentAssignments.filter(a => a.isOverdue);
 
   if (isLoading) {
     return (
@@ -157,21 +167,9 @@ const ProductDashboard = () => {
     return (
       <div className="flex justify-center items-center h-full">
         <p className="text-gray-500">No dashboard data available</p>
-        <div className="mt-4 text-xs text-gray-400">
-          Debug: {JSON.stringify({ stockSummaryResponse: !!stockSummaryResponse, hasData: !!stockSummaryResponse?.data })}
-        </div>
       </div>
     );
   }
-
-  // Prepare chart data for stock status distribution with safe defaults
-  const stockStatusData = {
-    series: Object.values(stockSummary.stockByStatus || {}),
-    labels: Object.keys(stockSummary.stockByStatus || {})
-  };
-
-  // Get overdue assignments
-  const overdueAssignments = recentAssignments.filter(a => a.isOverdue);
 
   return (
     <div className="flex flex-col gap-6 h-full p-6">
@@ -181,12 +179,12 @@ const ProductDashboard = () => {
           Welcome back, {currentUser?.name || currentUser?.username || 'User'}!
         </h2>
         <p className="text-gray-600 dark:text-gray-300">
-          You're managing {stockSummary.totalProducts || 0} products with {stockSummary.totalInventory || 0} inventory items
+          You're managing {stockSummary.totalProducts || 0} products across {stockSummary.stockByCategory?.length || 0} categories
         </p>
       </div>
 
       {/* Quick Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -204,6 +202,16 @@ const ProductDashboard = () => {
               <p className="text-2xl font-bold text-green-600">{stockSummary.stockByStatus?.AVAILABLE || 0}</p>
             </div>
             <MdInventory className="h-8 w-8 text-green-500" />
+          </div>
+        </Card>
+
+        <Card className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Categories</p>
+              <p className="text-2xl font-bold text-purple-600">{stockSummary.stockByCategory?.length || 0}</p>
+            </div>
+            <BiCategory className="h-8 w-8 text-purple-500" />
           </div>
         </Card>
 
@@ -229,26 +237,66 @@ const ProductDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Stock Status Chart */}
-        <Card className="lg:col-span-2">
+        {/* Category Distribution Chart */}
+        <Card>
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">Inventory Status Distribution</h3>
+            <h3 className="text-lg font-semibold">Stock by Category</h3>
+            <Button size="xs" onClick={() => navigate('/categories')}>
+              View Categories
+            </Button>
           </div>
-          {stockStatusData.series.length > 0 ? (
+          {categoryChartData.data.length > 0 ? (
             <Chart
-              series={[{
-                name: 'Inventory Items',
-                data: stockStatusData.series
-              }]}
+              series={categoryChartData.data}
+              xAxis={categoryChartData.labels}
+              height={300}
+              type="donut"
+              customOptions={{
+                colors: COLORS,
+                legend: { show: true, position: 'bottom' },
+                dataLabels: { enabled: true },
+                plotOptions: {
+                  pie: {
+                    donut: {
+                      labels: {
+                        show: true,
+                        total: {
+                          show: true,
+                          label: 'Total Stock',
+                          formatter: () => `${stockSummary.totalInventory} items`
+                        }
+                      }
+                    }
+                  }
+                }
+              }}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-64 text-gray-500">
+              No category data available
+            </div>
+          )}
+        </Card>
+
+        {/* Stock Status Chart */}
+        <Card>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Inventory Status</h3>
+          </div>
+          {stockStatusData.data.length > 0 ? (
+            <Chart
+              series={stockStatusData.data}
               xAxis={stockStatusData.labels}
               height={300}
               type="bar"
               customOptions={{
                 colors: [COLORS[0], COLORS[1], COLORS[2], COLORS[3], COLORS[4]],
-                legend: { show: true, position: 'top' },
+                legend: { show: false },
                 plotOptions: {
                   bar: {
-                    distributed: true
+                    distributed: true,
+                    borderRadius: 4,
+                    columnWidth: '60%'
                   }
                 }
               }}
@@ -264,7 +312,6 @@ const ProductDashboard = () => {
         <Card>
           <h3 className="text-lg font-semibold mb-4">Alerts & Status</h3>
           <div className="space-y-4">
-            {/* Low Stock Alert */}
             {(stockSummary.lowStockCount || 0) > 0 && (
               <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
                 <div className="flex items-center gap-2 mb-2">
@@ -286,7 +333,6 @@ const ProductDashboard = () => {
               </div>
             )}
 
-            {/* Overdue Assignments Alert */}
             {overdueAssignments.length > 0 && (
               <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
                 <div className="flex items-center gap-2 mb-2">
@@ -308,7 +354,6 @@ const ProductDashboard = () => {
               </div>
             )}
 
-            {/* All Good Status */}
             {(stockSummary.lowStockCount || 0) === 0 && overdueAssignments.length === 0 && (
               <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
                 <div className="flex items-center gap-2 mb-2">
@@ -323,8 +368,11 @@ const ProductDashboard = () => {
               </div>
             )}
 
-            {/* Quick Stats */}
             <div className="space-y-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex justify-between text-sm">
+                <span>Total Categories:</span>
+                <span className="font-medium">{stockSummary.stockByCategory?.length || 0}</span>
+              </div>
               <div className="flex justify-between text-sm">
                 <span>Return Rate:</span>
                 <span className="font-medium">{analytics?.returnRate || '0'}%</span>
@@ -341,6 +389,71 @@ const ProductDashboard = () => {
           </div>
         </Card>
       </div>
+
+      {/* Category-wise Stock Table */}
+      {stockSummary?.stockByCategory && stockSummary.stockByCategory.length > 0 && (
+        <Card>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Category-wise Stock Summary</h3>
+            <Button size="xs" onClick={() => navigate('/categories')}>
+              Manage Categories
+            </Button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="text-left py-2">Category</th>
+                  <th className="text-center py-2">Products</th>
+                  <th className="text-center py-2">Available Stock</th>
+                  <th className="text-center py-2">Stock Percentage</th>
+                  <th className="text-center py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stockSummary.stockByCategory.map((category, index) => {
+                  const percentage = stockSummary.totalInventory > 0 
+                    ? Math.round((category.availableStock / stockSummary.totalInventory) * 100)
+                    : 0;
+                  
+                  const lowStockProductsInCategory = stockSummary.lowStockProducts?.filter(
+                    p => p.category === category.categoryName
+                  ).length || 0;
+                  
+                  return (
+                    <tr key={category.categoryId} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="py-3 font-medium">{category.categoryName}</td>
+                      <td className="py-3 text-center">{category.productCount}</td>
+                      <td className="py-3 text-center">{category.availableStock}</td>
+                      <td className="py-3 text-center">
+                        <div className="flex items-center justify-center">
+                          <Progress 
+                            percent={percentage} 
+                            className="w-20 mr-2" 
+                            color={percentage > 20 ? COLORS[index % COLORS.length] : COLORS[COLORS.length - 1]}
+                          />
+                          <span>{percentage}%</span>
+                        </div>
+                      </td>
+                      <td className="py-3 text-center">
+                        {lowStockProductsInCategory > 0 ? (
+                          <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full">
+                            {lowStockProductsInCategory} low stock
+                          </span>
+                        ) : (
+                          <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                            Healthy
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
 
       {/* Recent Activity Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -362,11 +475,12 @@ const ProductDashboard = () => {
                     <h4 className="font-medium">{assignment.product.name}</h4>
                     <div className="text-sm text-gray-500 space-y-1">
                       <p>To: {assignment.employee.name} ({assignment.employee.empId})</p>
+                      <p>Category: {assignment.product.category.name}</p>
                       <p>Item: {assignment.inventory.serialNumber || `#${assignment.inventory.id}`}</p>
                       <p>{new Date(assignment.assignedAt).toLocaleDateString()}</p>
                     </div>
                   </div>
-                  <div className={`px-2 py-1 rounded text-xs font-medium ${assignment.isOverdue ? "text-red-600" : "text-blue-600"}`}>
+                  <div className={`px-2 py-1 rounded text-xs font-medium ${assignment.isOverdue ? "bg-red-100 text-red-800" : "bg-blue-100 text-blue-800"}`}>
                     {assignment.isOverdue ? `Overdue (${assignment.daysOverdue}d)` : 'Active'}
                   </div>
                 </div>
@@ -392,14 +506,16 @@ const ProductDashboard = () => {
                   <div className="flex-1">
                     <h4 className="font-medium">{transaction.inventory.product.name}</h4>
                     <div className="text-sm text-gray-500 space-y-1">
+                      <p>Category: {transaction.inventory.product.category}</p>
                       <p>{transaction.reason}</p>
+                      <p>By: {transaction.performedBy || 'System'}</p>
                       <p>{new Date(transaction.createdAt).toLocaleDateString()}</p>
                     </div>
                   </div>
                   <div className={`px-2 py-1 rounded text-xs font-medium ${
-                    transaction.type === 'IN' ? 'text-green-600' :
-                    transaction.type === 'OUT' ? 'text-blue-600' :
-                    'text-gray-600'
+                    transaction.type === 'IN' ? 'bg-green-100 text-green-800' :
+                    transaction.type === 'OUT' ? 'bg-blue-100 text-blue-800' :
+                    'bg-gray-100 text-gray-800'
                   }`}>
                     {transaction.type}
                   </div>
@@ -425,6 +541,7 @@ const ProductDashboard = () => {
                 <tr className="border-b border-gray-200 dark:border-gray-700">
                   <th className="text-left py-2">Product</th>
                   <th className="text-left py-2">Model</th>
+                  <th className="text-left py-2">Category</th>
                   <th className="text-center py-2">Current Stock</th>
                   <th className="text-center py-2">Min Required</th>
                   <th className="text-center py-2">Status</th>
@@ -432,13 +549,16 @@ const ProductDashboard = () => {
               </thead>
               <tbody>
                 {stockSummary.lowStockProducts.map((product) => (
-                  <tr key={product.id} className="border-b border-gray-100 dark:border-gray-800">
+                  <tr key={product.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="py-3 font-medium">{product.name}</td>
                     <td className="py-3">{product.model}</td>
+                    <td className="py-3">{product.category}</td>
                     <td className="py-3 text-center">{product.currentStock}</td>
                     <td className="py-3 text-center">{product.minStock}</td>
                     <td className="py-3 text-center">
-                      <div className={`px-2 py-1 rounded text-xs font-medium ${product.currentStock === 0 ? 'text-red-600' : 'text-orange-600'}`}>
+                      <div className={`px-2 py-1 rounded text-xs font-medium ${
+                        product.currentStock === 0 ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'
+                      }`}>
                         {product.currentStock === 0 ? 'Out of Stock' : 'Low Stock'}
                       </div>
                     </td>

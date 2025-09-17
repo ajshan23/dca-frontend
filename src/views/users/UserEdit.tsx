@@ -22,7 +22,7 @@ const validationSchema = Yup.object().shape({
     username: Yup.string()
         .required('Username Required')
         .min(3, 'Too Short!')
-        .max(20, 'Too Long!'),
+        .max(50, 'Too Long!'),
     password: Yup.string()
         .min(8, 'Minimum 8 characters'),
     role: Yup.string().required('Role Required')

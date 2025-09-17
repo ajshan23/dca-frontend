@@ -27,6 +27,17 @@ interface CurrentUser {
     email: string
 }
 
+interface ApiResponseData {
+    success: boolean
+    data: User[]
+    pagination: {
+        total: number
+        page: number
+        limit: number
+        totalPages: number
+    }
+}
+
 const userRoleColor = {
     super_admin: {
         label: 'Super Admin',
@@ -67,10 +78,7 @@ const UserTable = () => {
         }
     }, [])
 
-    const { data, isLoading, error } = useQuery<ApiResponse<{ 
-        data: User[]
-        total: number 
-    }>>({
+    const { data, isLoading, error } = useQuery<ApiResponse<ApiResponseData>>({
         queryKey: ['users', pagination, searchTerm],
         queryFn: () => apiGetUsers({
             page: pagination.page,
@@ -78,6 +86,13 @@ const UserTable = () => {
             search: searchTerm
         }),
     })
+
+    // Debug: log the data to see the API response structure
+    useEffect(() => {
+        console.log('Full API response:', data)
+        console.log('Users data:', data?.data?.data)
+        console.log('Pagination info:', data?.data?.pagination)
+    }, [data])
 
     const debouncedSearch = useMemo(
         () => debounce((value: string) => {
@@ -165,6 +180,10 @@ const UserTable = () => {
         )
     }
 
+    // Extract data based on the backend response structure
+    const usersData = data?.data?.data || []
+    const totalCount = data?.data?.pagination?.total || 0
+
     return (
         <>
             <div className="mb-4">
@@ -178,16 +197,18 @@ const UserTable = () => {
             <DataTable
                 ref={tableRef}
                 columns={columns}
-                data={data?.data?.data || []}
+                data={usersData}
                 loading={isLoading}
                 pagingData={{
-                    total: data?.data?.total || 0,
+                    total: totalCount,
                     pageIndex: pagination.page,
                     pageSize: pagination.limit,
                 }}
                 onPaginationChange={(page) => setPagination(prev => ({ ...prev, page }))}
                 onSelectChange={(limit) => setPagination({ page: 1, limit })}
             />
+            
+        
         </>
     )
 }

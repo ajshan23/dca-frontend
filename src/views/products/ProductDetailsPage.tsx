@@ -21,7 +21,7 @@ import {
 } from '@/components/ui';
 import DataTable from '@/components/shared/DataTable';
 import type { ColumnDef } from '@/components/shared/DataTable';
-import { HiOutlineArrowLeft, HiOutlinePrinter, HiOutlinePlus, HiOutlinePencil, HiOutlineSearch, HiOutlineQrcode, HiOutlineTrash } from 'react-icons/hi';
+import { HiOutlineArrowLeft, HiOutlinePrinter, HiOutlinePlus, HiOutlinePencil, HiOutlineSearch, HiOutlineQrcode, HiOutlineTrash, HiOutlineEye } from 'react-icons/hi';
 import { useNavigate } from 'react-router-dom';
 import { MdAssignment, MdInventory } from 'react-icons/md';
 import { BiBox } from 'react-icons/bi';
@@ -597,12 +597,10 @@ const ProductDetailsPage = () => {
       cell: (props) => new Date(props.row.original.assignedAt).toLocaleDateString(),
     },
     {
-      id: 'expectedReturn',
-      header: 'Expected Return',
+      id: 'pcName',
+      header: 'PC Name',
       cell: (props) => (
-        props.row.original.expectedReturnAt
-          ? new Date(props.row.original.expectedReturnAt).toLocaleDateString()
-          : '-'
+        props.row.original.pcName
       ),
     },
     {
@@ -636,24 +634,32 @@ const ProductDetailsPage = () => {
         )
       ),
     },
+    // {
+    //   id: 'assignedBy',
+    //   header: 'Assigned By',
+    //   cell: (props) => props.row.original.assignedBy?.username || 'Unknown',
+    // },
     {
-      id: 'assignedBy',
-      header: 'Assigned By',
-      cell: (props) => props.row.original.assignedBy?.username || 'Unknown',
-    },
-    {
-      id: 'assignmentActions',
-      header: 'Actions',
-      cell: (props) => (
-        <Button
-          size="xs"
-          icon={<HiOutlineQrcode />}
-          onClick={() => generateAssignmentQr(props.row.original.id)}
-          loading={isGeneratingAssignmentQr}
-          title="Generate QR Code"
-        />
-      ),
-    },
+  id: 'assignmentActions',
+  header: 'Actions',
+  cell: (props) => (
+    <div className="flex space-x-1">
+      <Button
+        size="xs"
+        icon={<HiOutlineEye />}
+        onClick={() => navigate(`/assignments/${props.row.original.id}`)}
+        title="View Details"
+      />
+      <Button
+        size="xs"
+        icon={<HiOutlineQrcode />}
+        onClick={() => generateAssignmentQr(props.row.original.id)}
+        loading={isGeneratingAssignmentQr}
+        title="Generate QR Code"
+      />
+    </div>
+  ),
+},
   ];
 
   if (productError) {

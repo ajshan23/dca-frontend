@@ -28,7 +28,7 @@ const navigationConfig: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'assignments',
+        key: 'productAssignments',
         path: '/assignments',
         title: 'Assignments',
         translateKey: 'nav.assignments',

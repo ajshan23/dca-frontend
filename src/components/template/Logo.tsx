@@ -31,8 +31,9 @@ const Logo = (props: LogoProps) => {
         >
             <img
                 className={imgClass}
-                src={`${LOGO_SRC_PATH}logo-dark-${type}.svg`}
+                src={`${LOGO_SRC_PATH}dcalogo.png`}
                 alt={`${APP_NAME} logo`}
+                style={{width:"80px",marginBottom:"10px"}}
             />
         </div>
     )

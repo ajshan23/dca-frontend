@@ -63,11 +63,18 @@ interface Assignment {
 }
 
 // Product CRUD operations
-export const apiGetProducts = async (params?: Record<string, any>) => {
+export const apiGetProducts = async (params) => {
   return ApiService.fetchData({
     url: '/products',
     method: 'get',
-    params
+    params: {
+      page: params?.page || 1,
+      limit: params?.limit || 10,
+      search: params?.search,
+      stockStatus: params?.stockStatus,
+      category: params?.category,
+      branch: params?.branch,
+    }
   });
 };
 
@@ -189,6 +196,7 @@ export const apiAssignProduct = async (data: {
   inventoryId?: number; // Optional - for specific inventory item
   expectedReturnAt?: string;
   notes?: string;
+  pcName?: string; // New field for PC/Workstation name
   autoSelect?: boolean; // Default true - auto-select available inventory
 }) => {
   return ApiService.fetchData({
@@ -281,7 +289,12 @@ export const apiGetAssignmentAnalytics = async (params?: {
     params
   });
 };
-
+export const apiGetAssignmentById = async (assignmentId: number) => {
+  return ApiService.fetchData({
+    url: `/product-assignments/${assignmentId}`,
+    method: 'get'
+  });
+};
 export const apiGetStockSummary = async () => {
   return ApiService.fetchData({
     url: '/products/stock-summary',

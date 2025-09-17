@@ -31,7 +31,7 @@ const _SidePanel = (props: SidePanelProps) => {
 
     return (
         <>
-            <div
+            {/* <div
                 className={classNames('text-2xl', className)}
                 onClick={openPanel}
                 {...rest}
@@ -47,7 +47,7 @@ const _SidePanel = (props: SidePanelProps) => {
                 onRequestClose={closePanel}
             >
                 <SidePanelContent callBackClose={closePanel} />
-            </Drawer>
+            </Drawer> */}
         </>
     )
 }

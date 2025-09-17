@@ -72,23 +72,55 @@ function getDefaultErrorMessage(statusCode: number): string {
     }
 }
 
+
 interface GetBranchesParams {
     page?: number
     limit?: number
     search?: string
 }
 
-export const apiGetBranches = async (params: GetBranchesParams) => {
-    return ApiService.fetchData({
-        url: '/branches',
-        method: 'get',
-        params: {
-            page: params.page,
-            limit: params.limit,
-            search: params.search
-        }
-    })
+interface BranchesResponse {
+    success: boolean
+    data: any[]
+    pagination: {
+        total: number
+        page: number
+        limit: number
+        totalPages: number
+    }
 }
+
+export const apiGetBranches = async (params: GetBranchesParams): Promise<{ data: BranchesResponse }> => {
+    try {
+        const response = await ApiService.fetchData<{ data: BranchesResponse }>({
+            url: '/branches',
+            method: 'get',
+            params: {
+                page: params.page,
+                limit: params.limit,
+                search: params.search
+            }
+        })
+        
+        return response
+    } catch (error: any) {
+        console.error('Error fetching branches:', error)
+        // Return empty data structure on error that matches the expected format
+        return {
+            data: {
+                success: false,
+                data: [],
+                pagination: {
+                    total: 0,
+                    page: 1,
+                    limit: params.limit || 10,
+                    totalPages: 0
+                }
+            }
+        }
+    }
+}
+
 
 export const apiGetBranch = async (id: string) => {
     return ApiService.fetchData({

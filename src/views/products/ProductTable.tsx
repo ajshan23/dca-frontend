@@ -1,6 +1,6 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import DataTable from '@/components/shared/DataTable';
-import { HiOutlineEye, HiOutlinePencil, HiOutlineUserAdd, HiOutlineRefresh, HiOutlinePlus } from 'react-icons/hi';
+import { HiOutlineEye, HiOutlinePencil, HiOutlineUserAdd, HiOutlineRefresh, HiOutlinePlus, HiOutlineTrash } from 'react-icons/hi';
 import useThemeClass from '@/utils/hooks/useThemeClass';
 import { useNavigate } from 'react-router-dom';
 import type { DataTableResetHandle, ColumnDef } from '@/components/shared/DataTable';
@@ -12,13 +12,14 @@ import {
   apiAssignProduct,
   apiReturnProduct,
   apiGetAvailableInventory,
-  apiAddStock
+  apiAddStock,
+  apiDeleteProduct
 } from '@/services/ProductService';
 import { apiGetEmployees } from '@/services/EmployeeService.ts';
 import type { ApiResponse } from '@/@types';
 import Badge from '@/components/ui/Badge';
 import { Button, Select, Dialog, Notification, toast, DatePicker, Card } from '@/components/ui';
-import { HiOutlineCheckCircle } from 'react-icons/hi';
+import { HiOutlineCheckCircle, HiExclamation } from 'react-icons/hi';
 import { MdAssignmentReturn } from 'react-icons/md';
 import { BiBox } from 'react-icons/bi';
 
@@ -82,13 +83,18 @@ interface Employee {
     assignments: number;
   };
 }
-
+interface CurrentUser {
+  username: string;
+  role: string;
+  name: string;
+  email: string;
+}
 const ProductTable = () => {
   const tableRef = useRef<DataTableResetHandle>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { textTheme } = useThemeClass();
-  
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [pagination, setPagination] = useState({
     page: 1,
@@ -98,9 +104,17 @@ const ProductTable = () => {
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
   const [addStockDialogOpen, setAddStockDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<{
     id: number;
     name: string;
+  } | null>(null);
+  const [productToDelete, setProductToDelete] = useState<{
+    id: number;
+    name: string;
+    model: string;
+    hasStock: boolean;
+    hasActiveAssignments: boolean;
   } | null>(null);
   const [selectedAssignment, setSelectedAssignment] = useState<{
     id: number;
@@ -109,6 +123,7 @@ const ProductTable = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<number | null>(null);
   const [expectedReturnDate, setExpectedReturnDate] = useState<Date | null>(null);
   const [notes, setNotes] = useState('');
+  const [pcName, setPcName] = useState(''); // New PC Name field
   const [returnCondition, setReturnCondition] = useState<'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR'>('GOOD');
   const [availableInventory, setAvailableInventory] = useState<InventoryItem[]>([]);
   const [selectedInventoryId, setSelectedInventoryId] = useState<number | null>(null);
@@ -116,12 +131,24 @@ const ProductTable = () => {
   const [stockSerialNumbers, setStockSerialNumbers] = useState<string[]>(['']);
   const [employeeSearchTerm, setEmployeeSearchTerm] = useState('');
 
+   useEffect(() => {
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        try {
+          console.log(JSON.parse(userData));
+          
+          setCurrentUser(JSON.parse(userData));
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+        }
+      }
+    }, []);
   const { 
     data: productsResponse, 
     isLoading, 
     error,
     refetch
-  } = useQuery<ApiResponse<Product[]>>({
+  } = useQuery({
     queryKey: ['products', pagination, searchTerm, stockFilter],
     queryFn: () => apiGetProducts({
       page: pagination.page,
@@ -129,6 +156,7 @@ const ProductTable = () => {
       search: searchTerm,
       stockStatus: stockFilter || undefined,
     }),
+    keepPreviousData: true
   });
 
   const { data: employeesResponse, refetch: refetchEmployees } = useQuery<ApiResponse<Employee[]>>({
@@ -139,7 +167,7 @@ const ProductTable = () => {
       search: employeeSearchTerm,
       status: 'active'
     }),
-    enabled: assignDialogOpen, // Only fetch when dialog is open
+    enabled: assignDialogOpen,
   });
 
   const assignMutation = useMutation({
@@ -208,6 +236,27 @@ const ProductTable = () => {
     }
   });
 
+  // Delete product mutation
+  const deleteMutation = useMutation({
+    mutationFn: apiDeleteProduct,
+    onSuccess: (response) => {
+      toast.push(
+        <Notification title="Success" type="success">
+          {response.data?.message || 'Product deleted successfully'}
+        </Notification>
+      );
+      queryClient.invalidateQueries(['products']);
+      resetDeleteDialog();
+    },
+    onError: (error: any) => {
+      toast.push(
+        <Notification title="Error" type="danger">
+          {error.response?.data?.message || 'Failed to delete product'}
+        </Notification>
+      );
+    }
+  });
+
   const debouncedSearch = useMemo(
     () => debounce((value: string) => {
       setSearchTerm(value);
@@ -229,6 +278,7 @@ const ProductTable = () => {
     setSelectedInventoryId(null);
     setExpectedReturnDate(null);
     setNotes('');
+    setPcName(''); // Reset PC Name field
     setAvailableInventory([]);
     setEmployeeSearchTerm('');
     setAssignDialogOpen(false);
@@ -247,13 +297,17 @@ const ProductTable = () => {
     setAddStockDialogOpen(false);
   };
 
+  const resetDeleteDialog = () => {
+    setProductToDelete(null);
+    setDeleteDialogOpen(false);
+  };
+
   const handleAssignClick = async (product: Product) => {
     setSelectedProduct({
       id: product.id,
       name: product.name
     });
     
-    // Fetch available inventory for this product
     try {
       const inventoryResponse = await apiGetAvailableInventory(product.id);
       setAvailableInventory(inventoryResponse.data?.data || []);
@@ -273,6 +327,20 @@ const ProductTable = () => {
     setAddStockDialogOpen(true);
   };
 
+  const handleDeleteClick = (product: Product) => {
+    const hasStock = product.stockInfo.totalStock > 0;
+    const hasActiveAssignments = product.stockInfo.assignedStock > 0;
+    
+    setProductToDelete({
+      id: product.id,
+      name: product.name,
+      model: product.model,
+      hasStock,
+      hasActiveAssignments
+    });
+    setDeleteDialogOpen(true);
+  };
+
   const handleReturnClick = (assignment: any) => {
     if (!assignment) return;
     
@@ -289,10 +357,11 @@ const ProductTable = () => {
     await assignMutation.mutateAsync({
       productId: selectedProduct.id,
       employeeId: selectedEmployee,
-      inventoryId: selectedInventoryId || undefined, // Specific inventory item if selected
+      inventoryId: selectedInventoryId || undefined,
       expectedReturnAt: expectedReturnDate?.toISOString(),
       notes,
-      autoSelect: !selectedInventoryId // Auto-select if no specific inventory chosen
+      pcName: pcName.trim() || undefined, // Include PC Name in the submission
+      autoSelect: !selectedInventoryId
     });
   };
 
@@ -326,6 +395,19 @@ const ProductTable = () => {
       productId: selectedProduct.id,
       stockData
     });
+  };
+
+  const handleDeleteSubmit = async () => {
+    if (!productToDelete?.id) {
+      toast.push(
+        <Notification title="Error" type="danger">
+          No product selected for deletion
+        </Notification>
+      );
+      return;
+    }
+    
+    await deleteMutation.mutateAsync(productToDelete.id);
   };
 
   const employeeOptions = useMemo(() => {
@@ -416,24 +498,28 @@ const ProductTable = () => {
       cell: (props) => {
         const product = props.row.original;
         const hasAvailableStock = product.stockInfo.availableStock > 0;
+        const hasActiveAssignments = product.stockInfo.assignedStock > 0;
 
         return (
-          <div className="flex justify-end text-lg gap-2">
+          <div className="flex justify-end text-lg gap-1">
             <Button
               size="xs"
               icon={<HiOutlineEye />}
               onClick={() => navigate(`/products/view/${product.id}`)}
+              title="View Product"
             />
             <Button
               size="xs"
               icon={<HiOutlinePencil />}
               onClick={() => navigate(`/products/edit/${product.id}`)}
+              title="Edit Product"
             />
             <Button
               size="xs"
               icon={<HiOutlinePlus />}
               onClick={() => handleAddStockClick(product)}
               variant="twoTone"
+              title="Add Stock"
             >
               Stock
             </Button>
@@ -443,6 +529,7 @@ const ProductTable = () => {
                 icon={<HiOutlineUserAdd />}
                 onClick={() => handleAssignClick(product)}
                 variant="solid"
+                title="Assign Product"
               >
                 Assign
               </Button>
@@ -451,10 +538,22 @@ const ProductTable = () => {
                 size="xs"
                 disabled
                 variant="plain"
+                title="No stock available"
               >
                 No Stock
               </Button>
             )}
+            {currentUser?.role==="super_admin"&&<Button
+              size="xs"
+              icon={<HiOutlineTrash />}
+              onClick={() => handleDeleteClick(product)}
+              variant="plain"
+              className="text-red-600 hover:text-red-800 hover:bg-red-50"
+              title={hasActiveAssignments ? "Cannot delete - has active assignments" : "Delete Product"}
+              disabled={hasActiveAssignments}
+            >
+              Delete
+            </Button>}
           </div>
         );
       },
@@ -484,7 +583,10 @@ const ProductTable = () => {
             placeholder="Filter by stock"
             options={stockFilterOptions}
             value={stockFilter ? { value: stockFilter, label: stockFilterOptions.find(opt => opt.value === stockFilter)?.label } : null}
-            onChange={(option: any) => setStockFilter(option?.value || '')}
+            onChange={(option: any) => {
+              setStockFilter(option?.value || '');
+              setPagination(prev => ({ ...prev, page: 1 }));
+            }}
             className="min-w-[200px]"
             isClearable
           />
@@ -497,19 +599,129 @@ const ProductTable = () => {
         </Button>
       </div>
 
+      {/* Using DataTable with built-in pagination */}
       <DataTable
         ref={tableRef}
         columns={columns}
         data={productsResponse?.data?.data || []}
         loading={isLoading}
         pagingData={{
-          total: productsResponse?.data?.total || 0,
+          total: productsResponse?.data?.pagination?.total || 0,
           pageIndex: pagination.page,
           pageSize: pagination.limit,
         }}
         onPaginationChange={(page) => setPagination(prev => ({ ...prev, page }))}
         onSelectChange={(limit) => setPagination({ page: 1, limit })}
       />
+
+      {/* Delete Product Dialog */}
+      <Dialog
+        isOpen={deleteDialogOpen}
+        onClose={resetDeleteDialog}
+        onRequestClose={resetDeleteDialog}
+        width={500}
+      >
+        <div className="text-center">
+          {/* Warning Icon */}
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+            <HiExclamation className="h-6 w-6 text-red-600" />
+          </div>
+
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Delete Product
+          </h3>
+
+          {productToDelete && (
+            <div className="mb-6">
+              <p className="text-sm text-gray-500 mb-4">
+                Are you sure you want to delete this product? This action cannot be undone.
+              </p>
+              
+              {/* Product Details */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                <div className="text-left space-y-2">
+                  <div>
+                    <span className="font-semibold text-gray-700">Product:</span>
+                    <span className="ml-2">{productToDelete.name}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-700">Model:</span>
+                    <span className="ml-2">{productToDelete.model}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Warnings */}
+              {productToDelete.hasActiveAssignments && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
+                  <div className="flex">
+                    <HiExclamation className="h-5 w-5 text-red-400" />
+                    <div className="ml-3">
+                      <h4 className="text-sm font-medium text-red-800">
+                        Cannot Delete Product
+                      </h4>
+                      <div className="mt-2 text-sm text-red-700">
+                        <p>This product has active assignments and cannot be deleted. Please return all assigned items before deletion.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {productToDelete.hasStock && !productToDelete.hasActiveAssignments && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4">
+                  <div className="flex">
+                    <HiExclamation className="h-5 w-5 text-yellow-400" />
+                    <div className="ml-3">
+                      <h4 className="text-sm font-medium text-yellow-800">
+                        Warning: Product Has Inventory
+                      </h4>
+                      <div className="mt-2 text-sm text-yellow-700">
+                        <p>This product has inventory items. Deleting will also remove all associated inventory records.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!productToDelete.hasStock && !productToDelete.hasActiveAssignments && (
+                <div className="bg-green-50 border border-green-200 rounded-md p-3 mb-4">
+                  <div className="flex">
+                    <HiOutlineCheckCircle className="h-5 w-5 text-green-400" />
+                    <div className="ml-3">
+                      <h4 className="text-sm font-medium text-green-800">
+                        Safe to Delete
+                      </h4>
+                      <div className="mt-2 text-sm text-green-700">
+                        <p>This product has no inventory or active assignments.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex justify-center gap-3">
+            <Button
+              variant="plain"
+              onClick={resetDeleteDialog}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="solid"
+              onClick={handleDeleteSubmit}
+              loading={deleteMutation.isLoading}
+              disabled={productToDelete?.hasActiveAssignments}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {productToDelete?.hasActiveAssignments ? 'Cannot Delete' : 'Delete Product'}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
 
       {/* Assign Product Dialog */}
       <Dialog
@@ -546,6 +758,21 @@ const ProductTable = () => {
               </p>
             </div>
 
+            {/* PC Name Field */}
+            <div>
+              <label className="block text-sm font-medium mb-1">PC Name (Optional)</label>
+              <Input
+                type="text"
+                value={pcName}
+                onChange={(e) => setPcName(e.target.value)}
+                placeholder="Enter pc name"
+                maxLength={50}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Enter the PC  identifier for tracking purposes
+              </p>
+            </div>
+
             {availableInventory.length > 0 && (
               <div>
                 <label className="block text-sm font-medium mb-1">
@@ -567,7 +794,6 @@ const ProductTable = () => {
                 </p>
               </div>
             )}
-
 
             <div>
               <label className="block text-sm font-medium mb-1">Notes (Optional)</label>
@@ -599,7 +825,7 @@ const ProductTable = () => {
         )}
       </Dialog>
 
-      {/* Add Stock Dialog - Fixed with proper scrolling */}
+      {/* Add Stock Dialog */}
       <Dialog
         isOpen={addStockDialogOpen}
         onClose={resetAddStockForm}
@@ -611,7 +837,6 @@ const ProductTable = () => {
           
           {selectedProduct && (
             <>
-              {/* Scrollable content area */}
               <div className="flex-1 overflow-y-auto pr-2">
                 <div className="space-y-4">
                   <div>
@@ -629,7 +854,6 @@ const ProductTable = () => {
                       onChange={(e) => {
                         const qty = Number(e.target.value);
                         setStockQuantity(qty);
-                        // Adjust serial numbers array to match quantity
                         const newSerialNumbers = Array.from({ length: qty }, (_, i) => 
                           stockSerialNumbers[i] || ''
                         );
@@ -643,7 +867,6 @@ const ProductTable = () => {
                       Serial Numbers (Optional - {stockSerialNumbers.filter(sn => sn.trim()).length} of {stockQuantity} filled)
                     </label>
                     
-                    {/* Show warning if many items */}
                     {stockQuantity > 10 && (
                       <div className="bg-yellow-50 border border-yellow-200 rounded p-2 mb-2">
                         <p className="text-sm text-yellow-700">
@@ -652,7 +875,6 @@ const ProductTable = () => {
                       </div>
                     )}
                     
-                    {/* Container for serial inputs with its own scroll */}
                     <div 
                       className="max-h-60 overflow-y-auto border rounded p-3 bg-gray-50"
                       style={{ 
@@ -687,7 +909,6 @@ const ProductTable = () => {
                 </div>
               </div>
 
-              {/* Fixed action buttons */}
               <div className="flex justify-end gap-2 mt-6 pt-4 border-t flex-shrink-0">
                 <Button
                   variant="plain"

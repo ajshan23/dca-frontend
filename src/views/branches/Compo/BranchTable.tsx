@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import DataTable from '@/components/shared/DataTable'
 import { HiOutlineEye, HiOutlinePencil } from 'react-icons/hi'
 import useThemeClass from '@/utils/hooks/useThemeClass'
@@ -17,6 +17,17 @@ interface Branch {
     updatedAt: string
 }
 
+interface ApiResponseData {
+    success: boolean
+    data: Branch[]
+    pagination: {
+        total: number
+        page: number
+        limit: number
+        totalPages: number
+    }
+}
+
 const BranchTable = () => {
     const tableRef = useRef<DataTableResetHandle>(null)
     const navigate = useNavigate()
@@ -26,17 +37,22 @@ const BranchTable = () => {
         limit: 10,
     })
 
-    const { data, isLoading, error } = useQuery<ApiResponse<{ 
-        data: Branch[]
-        total: number 
-    }>>({
+    const { data, isLoading, error } = useQuery<ApiResponse<ApiResponseData>>({
         queryKey: ['branches', pagination, searchTerm],
         queryFn: () => apiGetBranches({
             page: pagination.page,
             limit: pagination.limit,
             search: searchTerm
         }),
+        keepPreviousData: true
     })
+
+    // Debug: log the data to see the API response structure
+    useEffect(() => {
+        console.log('Full API response:', data)
+        console.log('Branches data:', data?.data?.data)
+        console.log('Pagination info:', data?.data?.pagination)
+    }, [data])
 
     const debouncedSearch = useMemo(
         () => debounce((value: string) => {
@@ -96,6 +112,10 @@ const BranchTable = () => {
         )
     }
 
+    // Extract data based on the backend response structure
+    const branchesData = data?.data?.data || []
+    const totalCount = data?.data?.pagination?.total || 0
+
     return (
         <>
             <div className="mb-4">
@@ -109,16 +129,18 @@ const BranchTable = () => {
             <DataTable
                 ref={tableRef}
                 columns={columns}
-                data={data?.data?.data || []}
+                data={branchesData}
                 loading={isLoading}
                 pagingData={{
-                    total: data?.data?.total || 0,
+                    total: totalCount,
                     pageIndex: pagination.page,
                     pageSize: pagination.limit,
                 }}
                 onPaginationChange={(page) => setPagination(prev => ({ ...prev, page }))}
                 onSelectChange={(limit) => setPagination({ page: 1, limit })}
             />
+            
+          
         </>
     )
 }

@@ -79,22 +79,53 @@ function getDefaultErrorMessage(statusCode: number): string {
     }
 }
 
+
 interface GetUsersParams {
     page?: number
     limit?: number
     search?: string
 }
 
-export const apiGetUsers = async (params: GetUsersParams) => {
-    return ApiService.fetchData({
-        url: '/users',
-        method: 'get',
-        params: {
-            page: params.page,
-            limit: params.limit,
-            search: params.search
+interface UsersResponse {
+    success: boolean
+    data: any[]
+    pagination: {
+        total: number
+        page: number
+        limit: number
+        totalPages: number
+    }
+}
+
+export const apiGetUsers = async (params: GetUsersParams): Promise<{ data: UsersResponse }> => {
+    try {
+        const response = await ApiService.fetchData<{ data: UsersResponse }>({
+            url: '/users',
+            method: 'get',
+            params: {
+                page: params.page,
+                limit: params.limit,
+                search: params.search
+            }
+        })
+        
+        return response
+    } catch (error: any) {
+        console.error('Error fetching users:', error)
+        // Return empty data structure on error that matches the expected format
+        return {
+            data: {
+                success: false,
+                data: [],
+                pagination: {
+                    total: 0,
+                    page: 1,
+                    limit: params.limit || 10,
+                    totalPages: 0
+                }
+            }
         }
-    })
+    }
 }
 
 export const apiGetUser = async (id: string) => {
