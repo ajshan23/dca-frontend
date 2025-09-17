@@ -15,6 +15,7 @@ interface PublicAssignmentInfo {
     notes?: string;
     isOverdue: boolean;
     daysOverdue: number;
+    pcName:string;
   };
   employee: {
     id: number;
@@ -212,8 +213,8 @@ const PublicAssignmentView: React.FC = () => {
                                 <span className="font-semibold text-gray-900 text-sm md:text-base">{formatDate(assignment.assignedAt)}</span>
                             </div>
                             <div className="flex flex-col xs:flex-row xs:justify-between xs:items-center py-2 px-3 md:py-3 md:px-4 rounded-lg hover:bg-gray-50 transition-colors duration-200">
-                                <span className="font-medium text-gray-600 text-sm md:text-base">Expected Return</span>
-                                <span className="font-semibold text-gray-900 text-sm md:text-base">{assignment.expectedReturnAt ? formatDate(assignment.expectedReturnAt) : 'Not specified'}</span>
+                                <span className="font-medium text-gray-600 text-sm md:text-base">PC Name</span>
+                                <span className="font-semibold text-gray-900 text-sm md:text-base">{assignment.pcName}</span>
                             </div>
                             <div className="flex flex-col xs:flex-row xs:justify-between xs:items-center py-2 px-3 md:py-3 md:px-4 rounded-lg hover:bg-gray-50 transition-colors duration-200">
                                 <span className="font-medium text-gray-600 text-sm md:text-base">Status</span>
