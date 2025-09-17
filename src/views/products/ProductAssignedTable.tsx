@@ -258,14 +258,14 @@ const AssignmentListTable = () => {
         </div>
       ),
     },
-    {
-      header: 'Assigned By',
-      cell: (props) => props.row.original.assignedBy.username,
-    },
-    {
-      header: 'Assigned At',
-      cell: (props) => new Date(props.row.original.assignedAt).toLocaleDateString(),
-    },
+    // {
+    //   header: 'Assigned By',
+    //   cell: (props) => props.row.original.assignedBy.username,
+    // },
+    // {
+    //   header: 'Assigned At',
+    //   cell: (props) => new Date(props.row.original.assignedAt).toLocaleDateString(),
+    // },
    
   
     {
