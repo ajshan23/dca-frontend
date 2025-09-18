@@ -1,12 +1,17 @@
 import { useState, useMemo, useRef } from 'react';
 import DataTable from '@/components/shared/DataTable';
-import { HiOutlineEye, HiOutlineRefresh, HiOutlineQrcode } from 'react-icons/hi';
+import { HiOutlineEye, HiOutlineRefresh, HiOutlineQrcode, HiOutlineTrash } from 'react-icons/hi';
 import { useNavigate } from 'react-router-dom';
 import type { DataTableResetHandle, ColumnDef } from '@/components/shared/DataTable';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import debounce from 'lodash/debounce';
 import Input from '@/components/ui/Input';
-import { apiGetActiveAssignments, apiReturnProduct, apiGenerateAssignmentQrCode } from '@/services/ProductService';
+import { 
+  apiGetActiveAssignments, 
+  apiReturnProduct, 
+  apiGenerateAssignmentQrCode, 
+  apiDeleteAssignment 
+} from '@/services/ProductService';
 import { Button, Dialog, Notification, toast, Select } from '@/components/ui';
 import { HiOutlineCheckCircle } from 'react-icons/hi';
 import { MdAssignmentReturn } from 'react-icons/md';
@@ -66,6 +71,11 @@ const AssignmentListTable = () => {
     inventoryStatus: 'AVAILABLE' as 'AVAILABLE' | 'DAMAGED' | 'MAINTENANCE'
   });
 
+  const [deleteDialog, setDeleteDialog] = useState({
+    open: false,
+    assignment: null as { id: number; productName: string; employeeName: string } | null
+  });
+
   // Data fetching
   const { 
     data: assignmentsResponse, 
@@ -97,6 +107,19 @@ const AssignmentListTable = () => {
     },
     onError: (error: any) => {
       showNotification(error.response?.data?.message || 'Failed to return product', 'danger');
+    }
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: apiDeleteAssignment,
+    onSuccess: () => {
+      showNotification('Assignment deleted successfully', 'success');
+      queryClient.invalidateQueries(['active-assignments']);
+      setDeleteDialog({ open: false, assignment: null });
+    },
+    onError: (error: any) => {
+      showNotification(error.response?.data?.message || 'Failed to delete assignment', 'danger');
     }
   });
 
@@ -156,6 +179,23 @@ const AssignmentListTable = () => {
         inventoryInfo: assignment.inventory.serialNumber || `Item #${assignment.inventory.id}`
       }
     });
+  };
+
+  const handleDeleteClick = (assignment: Assignment) => {
+    setDeleteDialog({
+      open: true,
+      assignment: {
+        id: assignment.id,
+        productName: assignment.product.name,
+        employeeName: assignment.employee.name
+      }
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteDialog.assignment?.id) return;
+    
+    await deleteMutation.mutateAsync(deleteDialog.assignment.id);
   };
 
   const handleReturnSubmit = async () => {
@@ -258,16 +298,10 @@ const AssignmentListTable = () => {
         </div>
       ),
     },
-    // {
-    //   header: 'Assigned By',
-    //   cell: (props) => props.row.original.assignedBy.username,
-    // },
     {
       header: 'Assigned On',
       cell: (props) => new Date(props.row.original.assignedAt).toLocaleDateString(),
     },
-   
-  
     {
       header: 'Actions',
       id: 'action',
@@ -298,6 +332,14 @@ const AssignmentListTable = () => {
             >
               Return
             </Button>
+            <Button
+              size="xs"
+              variant="solid"
+              color="red"
+              icon={<HiOutlineTrash />}
+              onClick={() => handleDeleteClick(assignment)}
+              title="Delete Assignment"
+            />
           </div>
         );
       },
@@ -436,6 +478,52 @@ const AssignmentListTable = () => {
                 icon={<HiOutlineCheckCircle />}
               >
                 Confirm Return
+              </Button>
+            </div>
+          </div>
+        )}
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        isOpen={deleteDialog.open}
+        onClose={() => setDeleteDialog({ open: false, assignment: null })}
+        onRequestClose={() => setDeleteDialog({ open: false, assignment: null })}
+        width={400}
+      >
+        <h4 className="mb-4">Delete Assignment</h4>
+        {deleteDialog.assignment && (
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              Are you sure you want to delete this assignment?
+            </p>
+            <div className="bg-red-50 p-3 rounded-md">
+              <p className="font-semibold text-red-700">
+                {deleteDialog.assignment.productName}
+              </p>
+              <p className="text-red-600 text-sm">
+                Assigned to: {deleteDialog.assignment.employeeName}
+              </p>
+            </div>
+            <p className="text-sm text-gray-500">
+              This action will return the inventory item to available stock and cannot be undone.
+            </p>
+
+            <div className="flex justify-end gap-2 mt-6">
+              <Button
+                variant="plain"
+                onClick={() => setDeleteDialog({ open: false, assignment: null })}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="solid"
+                color="red"
+                onClick={handleDeleteConfirm}
+                loading={deleteMutation.isLoading}
+                icon={<HiOutlineTrash />}
+              >
+                Delete Assignment
               </Button>
             </div>
           </div>

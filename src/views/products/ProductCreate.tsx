@@ -13,7 +13,7 @@ import { apiGetCategories } from '@/services/CategoryService';
 import { apiGetBranches } from '@/services/BranchService';
 import { apiGetDepartments } from '@/services/DepartmentService';
 import { HiOutlinePlus, HiOutlineMinus } from 'react-icons/hi';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const validationSchema = Yup.object().shape({
   name: Yup.string()
@@ -35,9 +35,6 @@ const validationSchema = Yup.object().shape({
   initialStock: Yup.number()
     .min(0, 'Initial stock cannot be negative')
     .max(1000, 'Initial stock cannot exceed 1000'),
-  purchasePrice: Yup.number()
-    .nullable()
-    .min(0, 'Purchase price cannot be negative'),
   serialNumbers: Yup.array().of(
     Yup.string().trim()
   )
@@ -91,7 +88,6 @@ const ProductCreate = () => {
         initialStock: Number(values.initialStock) || 0,
         serialNumbers: values.serialNumbers?.filter((sn: string) => sn.trim()) || [],
         purchaseDate: values.purchaseDate || undefined,
-        purchasePrice: values.purchasePrice ? Number(values.purchasePrice) : undefined,
         location: values.location?.trim() || undefined
       };
 
@@ -143,12 +139,11 @@ const ProductCreate = () => {
           warrantyDuration: '',
           complianceStatus: false,
           description: '',
-          minStockLevel: 0,
+          minStockLevel: null,
           // Initial stock fields
-          initialStock: 0,
+          initialStock: null,
           serialNumbers: [''],
           purchaseDate: '',
-          purchasePrice: '',
           location: ''
         }}
         validationSchema={validationSchema}
@@ -158,6 +153,27 @@ const ProductCreate = () => {
           const categories = categoriesData?.data?.data || [];
           const branches = branchesData?.data?.data || [];
           const departments = departmentsData?.data?.data || [];
+
+          // Automatically adjust serial number boxes based on initial stock
+          useEffect(() => {
+            const currentCount = values.serialNumbers.length;
+            const targetCount = Math.max(1, Number(values.initialStock) || 0);
+            
+            if (targetCount !== currentCount) {
+              if (targetCount > currentCount) {
+                // Add missing boxes
+                const newSerialNumbers = [...values.serialNumbers];
+                while (newSerialNumbers.length < targetCount) {
+                  newSerialNumbers.push('');
+                }
+                setFieldValue('serialNumbers', newSerialNumbers);
+              } else if (targetCount < currentCount) {
+                // Remove extra boxes (keep at least 1)
+                const newSerialNumbers = values.serialNumbers.slice(0, Math.max(1, targetCount));
+                setFieldValue('serialNumbers', newSerialNumbers);
+              }
+            }
+          }, [values.initialStock, values.serialNumbers.length, setFieldValue]);
 
           return (
             <Form>
@@ -349,43 +365,21 @@ const ProductCreate = () => {
                         />
                       </FormItem>
 
-                      <FormItem
-                        label="Purchase Price per Item"
-                        invalid={!!errors.purchasePrice && touched.purchasePrice}
-                        errorMessage={errors.purchasePrice as string}
-                      >
-                        <Field
-                          type="number"
-                          name="purchasePrice"
-                          placeholder="Price per item"
-                          component={Input}
-                          min="0"
-                          step="0.01"
-                        />
-                      </FormItem>
+                      
 
-                      {/* <FormItem label="Storage Location">
-                        <Field
-                          type="text"
-                          name="location"
-                          placeholder="Storage location"
-                          component={Input}
-                        />
-                      </FormItem> */}
-
-                      {/* Serial Numbers */}
+                      {/* Serial Numbers - Automatically shown based on initial stock */}
                       {Number(values.initialStock) > 0 && (
                         <div className="md:col-span-2">
-                          <FormItem label={`Serial Numbers (Optional - ${values.serialNumbers.length} of ${values.initialStock})`}>
+                          <FormItem label={`Serial Numbers (${values.serialNumbers.length} items)`}>
                             <FieldArray name="serialNumbers">
-                              {({ push, remove }) => (
+                              {({ remove }) => (
                                 <div className="space-y-2">
                                   {values.serialNumbers.map((serialNumber: string, index: number) => (
                                     <div key={index} className="flex gap-2">
                                       <Field
                                         type="text"
                                         name={`serialNumbers.${index}`}
-                                        placeholder={`Serial number ${index + 1}`}
+                                        placeholder={`Serial number for item ${index + 1}`}
                                         component={Input}
                                         className="flex-1"
                                       />
@@ -395,26 +389,19 @@ const ProductCreate = () => {
                                           size="sm"
                                           variant="plain"
                                           icon={<HiOutlineMinus />}
-                                          onClick={() => remove(index)}
+                                          onClick={() => {
+                                            const newSerialNumbers = [...values.serialNumbers];
+                                            newSerialNumbers.splice(index, 1);
+                                            setFieldValue('serialNumbers', newSerialNumbers);
+                                            setFieldValue('initialStock', Math.max(0, Number(values.initialStock) - 1));
+                                          }}
                                         />
                                       )}
                                     </div>
                                   ))}
                                   
-                                  {values.serialNumbers.length < Number(values.initialStock) && (
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="plain"
-                                      icon={<HiOutlinePlus />}
-                                      onClick={() => push('')}
-                                    >
-                                      Add Serial Number
-                                    </Button>
-                                  )}
-                                  
                                   <p className="text-xs text-gray-500">
-                                    Add serial numbers for trackable items. Leave empty for non-serialized items.
+                                    Enter serial numbers for each item. Serial numbers are required for trackable items.
                                   </p>
                                 </div>
                               )}

@@ -23,7 +23,7 @@ const CloseButton = forwardRef<HTMLElement, CloseButtonProps>((props, ref) => {
 
     return (
         <span className={closeButtonClass} role="button" {...rest} ref={ref}>
-            <HiX />
+            <HiX size={25} />
         </span>
     )
 })

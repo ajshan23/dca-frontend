@@ -266,13 +266,7 @@ const ExcelExportModal: React.FC<ExcelExportModalProps> = ({ isOpen, onClose, ty
         <h4 className="text-lg font-semibold">
           Export {type === 'products' ? 'Products' : 'Assignments'} to Excel
         </h4>
-        {/* <Button
-          size="xs"
-          variant="plain"
-          icon={<HiOutlineX />}
-          onClick={onClose}
-          disabled={isExporting}
-        /> */}
+       
       </div>
       
       <FormContainer>

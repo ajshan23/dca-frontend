@@ -41,8 +41,8 @@ interface ApiResponseData {
 const userRoleColor = {
     super_admin: {
         label: 'Super Admin',
-        dotClass: 'bg-purple-500',
-        textClass: 'text-purple-500',
+        dotClass: 'bg-[#4f39f6]',
+        textClass: 'text-[#4f39f6]',
     },
     admin: {
         label: 'Admin',
@@ -146,13 +146,8 @@ const UserTable = () => {
                 const canEditSuperAdmin = currentUser?.role === 'super_admin'
 
                 return (
-                    <div className="flex justify-end text-lg">
-                        <span
-                            className={`cursor-pointer p-2 hover:${textTheme}`}
-                            onClick={() => navigate(`/users/view/${user.id}`)}
-                        >
-                            <HiOutlineEye />
-                        </span>
+                    <div className="flex justify-center text-lg">
+                        
                         {/* Only show edit button if:
                             1. The user is not a super admin OR
                             2. The current user is a super admin */}

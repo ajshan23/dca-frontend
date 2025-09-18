@@ -7,8 +7,8 @@ import type { DataTableResetHandle, ColumnDef } from '@/components/shared/DataTa
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import debounce from 'lodash/debounce';
 import Input from '@/components/ui/Input';
-import { 
-  apiGetProducts, 
+import {
+  apiGetProducts,
   apiAssignProduct,
   apiReturnProduct,
   apiGetAvailableInventory,
@@ -131,21 +131,21 @@ const ProductTable = () => {
   const [stockSerialNumbers, setStockSerialNumbers] = useState<string[]>(['']);
   const [employeeSearchTerm, setEmployeeSearchTerm] = useState('');
 
-   useEffect(() => {
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        try {
-          console.log(JSON.parse(userData));
-          
-          setCurrentUser(JSON.parse(userData));
-        } catch (error) {
-          console.error('Error parsing user data:', error);
-        }
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        console.log(JSON.parse(userData));
+
+        setCurrentUser(JSON.parse(userData));
+      } catch (error) {
+        console.error('Error parsing user data:', error);
       }
-    }, []);
-  const { 
-    data: productsResponse, 
-    isLoading, 
+    }
+  }, []);
+  const {
+    data: productsResponse,
+    isLoading,
     error,
     refetch
   } = useQuery({
@@ -161,8 +161,8 @@ const ProductTable = () => {
 
   const { data: employeesResponse, refetch: refetchEmployees } = useQuery<ApiResponse<Employee[]>>({
     queryKey: ['employees-for-assignment', employeeSearchTerm],
-    queryFn: () => apiGetEmployees({ 
-      page: 1, 
+    queryFn: () => apiGetEmployees({
+      page: 1,
       limit: 100,
       search: employeeSearchTerm,
       status: 'active'
@@ -191,7 +191,7 @@ const ProductTable = () => {
   });
 
   const returnMutation = useMutation({
-    mutationFn: (data: {assignmentId: number, condition?: string, notes?: string}) => 
+    mutationFn: (data: { assignmentId: number, condition?: string, notes?: string }) =>
       apiReturnProduct(data.assignmentId, {
         condition: data.condition,
         notes: data.notes,
@@ -216,7 +216,7 @@ const ProductTable = () => {
   });
 
   const addStockMutation = useMutation({
-    mutationFn: (data: {productId: number, stockData: any}) => 
+    mutationFn: (data: { productId: number, stockData: any }) =>
       apiAddStock(data.productId, data.stockData),
     onSuccess: (response) => {
       toast.push(
@@ -307,7 +307,7 @@ const ProductTable = () => {
       id: product.id,
       name: product.name
     });
-    
+
     try {
       const inventoryResponse = await apiGetAvailableInventory(product.id);
       setAvailableInventory(inventoryResponse.data?.data || []);
@@ -315,7 +315,7 @@ const ProductTable = () => {
       console.error('Failed to fetch available inventory:', error);
       setAvailableInventory([]);
     }
-    
+
     setAssignDialogOpen(true);
   };
 
@@ -330,7 +330,7 @@ const ProductTable = () => {
   const handleDeleteClick = (product: Product) => {
     const hasStock = product.stockInfo.totalStock > 0;
     const hasActiveAssignments = product.stockInfo.assignedStock > 0;
-    
+
     setProductToDelete({
       id: product.id,
       name: product.name,
@@ -343,7 +343,7 @@ const ProductTable = () => {
 
   const handleReturnClick = (assignment: any) => {
     if (!assignment) return;
-    
+
     setSelectedAssignment({
       id: assignment.id,
       productName: assignment.product?.name || 'Unknown Product'
@@ -353,7 +353,7 @@ const ProductTable = () => {
 
   const handleAssignSubmit = async () => {
     if (!selectedProduct || !selectedEmployee) return;
-    
+
     await assignMutation.mutateAsync({
       productId: selectedProduct.id,
       employeeId: selectedEmployee,
@@ -374,7 +374,7 @@ const ProductTable = () => {
       );
       return;
     }
-    
+
     await returnMutation.mutateAsync({
       assignmentId: selectedAssignment.id,
       condition: returnCondition,
@@ -384,13 +384,13 @@ const ProductTable = () => {
 
   const handleAddStockSubmit = async () => {
     if (!selectedProduct) return;
-    
+
     const stockData = {
       quantity: stockQuantity,
       serialNumbers: stockSerialNumbers.filter(sn => sn.trim()),
       reason: 'Stock replenishment'
     };
-    
+
     await addStockMutation.mutateAsync({
       productId: selectedProduct.id,
       stockData
@@ -406,7 +406,7 @@ const ProductTable = () => {
       );
       return;
     }
-    
+
     await deleteMutation.mutateAsync(productToDelete.id);
   };
 
@@ -435,7 +435,7 @@ const ProductTable = () => {
 
   const getStockBadge = (stockInfo: StockInfo) => {
     const { stockStatus, availableStock } = stockInfo;
-    
+
     switch (stockStatus) {
       case 'OUT_OF_STOCK':
         return <div className="text-red-600 px-2 py-1 rounded text-sm">Out of Stock</div>;
@@ -473,7 +473,7 @@ const ProductTable = () => {
           <div>
             {getStockBadge(stockInfo)}
             <div className="text-xs text-gray-500 mt-1">
-              Total: {stockInfo?.totalStock} | 
+              Total: {stockInfo?.totalStock} |
               Assigned: {stockInfo.assignedStock}
             </div>
           </div>
@@ -543,7 +543,7 @@ const ProductTable = () => {
                 No Stock
               </Button>
             )}
-            {currentUser?.role==="super_admin"&&<Button
+            {currentUser?.role === "super_admin" && <Button
               size="xs"
               icon={<HiOutlineTrash />}
               onClick={() => handleDeleteClick(product)}
@@ -636,7 +636,7 @@ const ProductTable = () => {
               <p className="text-sm text-gray-500 mb-4">
                 Are you sure you want to delete this product? This action cannot be undone.
               </p>
-              
+
               {/* Product Details */}
               <div className="bg-gray-50 rounded-lg p-4 mb-4">
                 <div className="text-left space-y-2">
@@ -743,10 +743,10 @@ const ProductTable = () => {
               <Select
                 placeholder="Search and select employee"
                 options={employeeOptions}
-                value={selectedEmployee ? 
-                  { 
-                    value: selectedEmployee, 
-                    label: employeeOptions.find(e => e.value === selectedEmployee)?.label 
+                value={selectedEmployee ?
+                  {
+                    value: selectedEmployee,
+                    label: employeeOptions.find(e => e.value === selectedEmployee)?.label
                   } : null}
                 onChange={(option: any) => setSelectedEmployee(option?.value)}
                 onInputChange={(value) => debouncedEmployeeSearch(value)}
@@ -781,10 +781,10 @@ const ProductTable = () => {
                 <Select
                   placeholder="Auto-select available item"
                   options={inventoryOptions}
-                  value={selectedInventoryId ? 
-                    { 
-                      value: selectedInventoryId, 
-                      label: inventoryOptions.find(i => i.value === selectedInventoryId)?.label 
+                  value={selectedInventoryId ?
+                    {
+                      value: selectedInventoryId,
+                      label: inventoryOptions.find(i => i.value === selectedInventoryId)?.label
                     } : null}
                   onChange={(option: any) => setSelectedInventoryId(option?.value)}
                   isClearable
@@ -834,14 +834,14 @@ const ProductTable = () => {
       >
         <div className="max-h-[80vh] flex flex-col">
           <h4 className="mb-4 flex-shrink-0">Add Stock</h4>
-          
+
           {selectedProduct && (
             <>
               <div className="flex-1 overflow-y-auto pr-2">
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Product</label>
-                    <p className="font-semibold">{selectedProduct.name}</p>
+                    <label className="block text-sm font-medium mb-1">Product: <span className="font-semibold">{selectedProduct.name}</span>
+                    </label>
                   </div>
 
                   <div>
@@ -854,7 +854,7 @@ const ProductTable = () => {
                       onChange={(e) => {
                         const qty = Number(e.target.value);
                         setStockQuantity(qty);
-                        const newSerialNumbers = Array.from({ length: qty }, (_, i) => 
+                        const newSerialNumbers = Array.from({ length: qty }, (_, i) =>
                           stockSerialNumbers[i] || ''
                         );
                         setStockSerialNumbers(newSerialNumbers);
@@ -866,18 +866,12 @@ const ProductTable = () => {
                     <label className="block text-sm font-medium mb-1">
                       Serial Numbers (Optional - {stockSerialNumbers.filter(sn => sn.trim()).length} of {stockQuantity} filled)
                     </label>
+
                     
-                    {stockQuantity > 10 && (
-                      <div className="bg-yellow-50 border border-yellow-200 rounded p-2 mb-2">
-                        <p className="text-sm text-yellow-700">
-                          Large quantity detected. Consider using batch serial number format or leave empty for auto-generation.
-                        </p>
-                      </div>
-                    )}
-                    
-                    <div 
+
+                    <div
                       className="max-h-60 overflow-y-auto border rounded p-3 bg-gray-50"
-                      style={{ 
+                      style={{
                         scrollbarWidth: 'thin',
                         scrollbarColor: '#cbd5e1 #f1f5f9'
                       }}

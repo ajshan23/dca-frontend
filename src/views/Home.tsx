@@ -406,8 +406,7 @@ const ProductDashboard = () => {
                   <th className="text-left py-2">Category</th>
                   <th className="text-center py-2">Products</th>
                   <th className="text-center py-2">Available Stock</th>
-                  <th className="text-center py-2">Stock Percentage</th>
-                  <th className="text-center py-2">Status</th>
+                  
                 </tr>
               </thead>
               <tbody>
@@ -425,27 +424,7 @@ const ProductDashboard = () => {
                       <td className="py-3 font-medium">{category.categoryName}</td>
                       <td className="py-3 text-center">{category.productCount}</td>
                       <td className="py-3 text-center">{category.availableStock}</td>
-                      <td className="py-3 text-center">
-                        <div className="flex items-center justify-center">
-                          <Progress 
-                            percent={percentage} 
-                            className="w-20 mr-2" 
-                            color={percentage > 20 ? COLORS[index % COLORS.length] : COLORS[COLORS.length - 1]}
-                          />
-                          <span>{percentage}%</span>
-                        </div>
-                      </td>
-                      <td className="py-3 text-center">
-                        {lowStockProductsInCategory > 0 ? (
-                          <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full">
-                            {lowStockProductsInCategory} low stock
-                          </span>
-                        ) : (
-                          <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                            Healthy
-                          </span>
-                        )}
-                      </td>
+                      
                     </tr>
                   );
                 })}

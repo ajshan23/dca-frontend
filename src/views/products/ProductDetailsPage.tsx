@@ -930,8 +930,8 @@ const ProductDetailsPage = () => {
           <div className="flex-1 overflow-y-auto pr-2">
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Product</label>
-                <p className="font-semibold">{product.name}</p>
+                <label className="block text-sm font-medium mb-1">Product: <span className="font-semibold">{product.name}</span></label>
+                
               </div>
 
               <div>
@@ -960,14 +960,7 @@ const ProductDetailsPage = () => {
                   Serial Numbers (Optional - {stockForm.serialNumbers.filter(sn => sn.trim()).length} of {stockForm.quantity} filled)
                 </label>
 
-                {/* Show warning if many items */}
-                {stockForm.quantity > 10 && (
-                  <div className="border border-yellow-200 rounded p-2 mb-2">
-                    <p className="text-sm text-yellow-700">
-                      Large quantity detected. Consider using batch serial number format or leave empty for auto-generation.
-                    </p>
-                  </div>
-                )}
+                
 
                 {/* Container for serial inputs with its own scroll */}
                 <div

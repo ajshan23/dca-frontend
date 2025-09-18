@@ -376,6 +376,14 @@ export const apiExportAssignmentsToExcel = async (params?: Record<string, any>) 
     responseType: 'blob' // Important for file downloads
   });
 };
+
+export const apiDeleteAssignment = async (assignmentId: number) => {
+  return ApiService.fetchData({
+    url: `/product-assignments/${assignmentId}`,
+    method: 'delete'
+  });
+};
+
 export default {
   apiGetProducts,
   apiGetProductById,
