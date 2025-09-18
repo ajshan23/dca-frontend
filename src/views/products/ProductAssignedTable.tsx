@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import DataTable from '@/components/shared/DataTable';
 import { HiOutlineEye, HiOutlineRefresh, HiOutlineQrcode, HiOutlineTrash } from 'react-icons/hi';
 import { useNavigate } from 'react-router-dom';
@@ -55,6 +55,13 @@ interface Assignment {
   };
 }
 
+interface CurrentUser {
+  username: string;
+  role: string;
+  name: string;
+  email: string;
+}
+
 const AssignmentListTable = () => {
   const tableRef = useRef<DataTableResetHandle>(null);
   const navigate = useNavigate();
@@ -75,6 +82,19 @@ const AssignmentListTable = () => {
     open: false,
     assignment: null as { id: number; productName: string; employeeName: string } | null
   });
+
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        setCurrentUser(JSON.parse(userData));
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+      }
+    }
+  }, []);
 
   // Data fetching
   const { 
@@ -332,19 +352,22 @@ const AssignmentListTable = () => {
             >
               Return
             </Button>
-            <Button
-              size="xs"
-              variant="solid"
-              color="red"
-              icon={<HiOutlineTrash />}
-              onClick={() => handleDeleteClick(assignment)}
-              title="Delete Assignment"
-            />
+            {/* Condition to show delete button only for super_admin */}
+            {currentUser?.role === "super_admin" && (
+              <Button
+                size="xs"
+                variant="solid"
+                color="red"
+                icon={<HiOutlineTrash />}
+                onClick={() => handleDeleteClick(assignment)}
+                title="Delete Assignment"
+              />
+            )}
           </div>
         );
       },
     },
-  ], [navigate, generateAssignmentQr, isGeneratingAssignmentQr]);
+  ], [navigate, generateAssignmentQr, isGeneratingAssignmentQr, currentUser]);
 
   if (error) {
     return (
