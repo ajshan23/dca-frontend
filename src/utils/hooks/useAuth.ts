@@ -40,7 +40,7 @@ function useAuth() {
           
                 
                 // Dispatch actions
-                dispatch(signInSuccess(token));
+                dispatch(signInSuccess({token,role:user.role}));
                 dispatch(
                     setUser({
                         avatar: '',

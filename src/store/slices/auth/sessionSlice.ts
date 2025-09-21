@@ -3,25 +3,29 @@ import { SLICE_BASE_NAME } from './constants'
 
 export interface SessionState {
     signedIn: boolean
-    token: string | null
+    token: string | null,
+    role: string,
 }
 
 const initialState: SessionState = {
     signedIn: false,
     token: null,
+    role: ""
 }
 
 const sessionSlice = createSlice({
     name: `${SLICE_BASE_NAME}/session`,
     initialState,
     reducers: {
-        signInSuccess(state, action: PayloadAction<string>) {
+        signInSuccess(state, action: any) {
             state.signedIn = true
-            state.token = action.payload
+            state.token = action.payload.token
+            state.role = action.payload.role
         },
         signOutSuccess(state) {
             state.signedIn = false
             state.token = null
+            state.role = ""
         },
     },
 })

@@ -259,180 +259,184 @@ const ExcelExportModal: React.FC<ExcelExportModalProps> = ({ isOpen, onClose, ty
       isOpen={isOpen}
       onClose={onClose}
       width={600}
-      height={700}
       closable={!isExporting}
+      className="!max-h-[90vh]"
     >
-      <div className="flex justify-between items-center mb-4">
-        <h4 className="text-lg font-semibold">
-          Export {type === 'products' ? 'Products' : 'Assignments'} to Excel
-        </h4>
-       
-      </div>
-      
-      <FormContainer>
-        <div className="max-h-96 overflow-y-auto pr-2 space-y-4">
-          {/* Date Range Filters */}
-          <div className="grid grid-cols-2 gap-3">
-            <FormItem label="From Date">
-              <DatePicker
-                value={filters.fromDate}
-                onChange={(date) => handleFilterChange('fromDate', date)}
-                placeholder="Select start date"
-                disabled={isExporting}
-              />
-            </FormItem>
-            <FormItem label="To Date">
-              <DatePicker
-                value={filters.toDate}
-                onChange={(date) => handleFilterChange('toDate', date)}
-                placeholder="Select end date"
-                disabled={isExporting}
-              />
-            </FormItem>
-          </div>
-          
-          {/* Month/Year Selection */}
-          <div className="grid grid-cols-2 gap-3">
-            <FormItem label="Month">
-              <Select
-                options={monthOptions}
-                value={monthOptions.find(opt => opt.value === filters.month) || null}
-                onChange={(option) => handleFilterChange('month', option?.value || '')}
-                placeholder="Select month"
-                isDisabled={isExporting}
-              />
-            </FormItem>
-            <FormItem label="Year">
-              <Select
-                options={yearOptions}
-                value={yearOptions.find(opt => opt.value === filters.year) || null}
-                onChange={(option) => handleFilterChange('year', option?.value || '')}
-                placeholder="Select year"
-                isDisabled={isExporting}
-              />
-            </FormItem>
-          </div>
-          
-          {/* Entity Filters */}
-          <FormItem label="Category">
-            <Select
-              options={categoryOptions}
-              value={categoryOptions.find(opt => opt.value === filters.categoryId) || null}
-              onChange={(option) => handleFilterChange('categoryId', option?.value || '')}
-              placeholder="Select category"
-              isDisabled={isExporting}
-            />
-          </FormItem>
-          
-          <FormItem label="Branch">
-            <Select
-              options={branchOptions}
-              value={branchOptions.find(opt => opt.value === filters.branchId) || null}
-              onChange={(option) => handleFilterChange('branchId', option?.value || '')}
-              placeholder="Select branch"
-              isDisabled={isExporting}
-            />
-          </FormItem>
-          
-          <FormItem label="Department">
-            <Select
-              options={departmentOptions}
-              value={departmentOptions.find(opt => opt.value === filters.departmentId) || null}
-              onChange={(option) => handleFilterChange('departmentId', option?.value || '')}
-              placeholder="Select department"
-              isDisabled={isExporting}
-            />
-          </FormItem>
-          
-          {type === 'assignments' && (
-            <FormItem label="Employee">
-              <Select
-                options={employeeOptions}
-                value={employeeOptions.find(opt => opt.value === filters.employeeId) || null}
-                onChange={(option) => handleFilterChange('employeeId', option?.value || '')}
-                placeholder="Select employee"
-                isDisabled={isExporting}
-              />
-            </FormItem>
-          )}
-          
-          {/* Status Filters */}
-          {type === 'assignments' ? (
-            <FormItem label="Assignment Status">
-              <Select
-                options={statusOptions}
-                value={statusOptions.find(opt => opt.value === filters.status) || null}
-                onChange={(option) => handleFilterChange('status', option?.value || '')}
-                placeholder="Select status"
-                isDisabled={isExporting}
-              />
-            </FormItem>
-          ) : (
-            <FormItem label="Stock Status">
-              <Select
-                options={stockStatusOptions}
-                value={stockStatusOptions.find(opt => opt.value === filters.stockStatus) || null}
-                onChange={(option) => handleFilterChange('stockStatus', option?.value || '')}
-                placeholder="Select stock status"
-                isDisabled={isExporting}
-              />
-            </FormItem>
-          )}
-          
-          {/* Format Options */}
-          {type === 'assignments' && (
-            <FormItem label="Export Format">
-              <Select
-                options={formatOptions}
-                value={formatOptions.find(opt => opt.value === filters.format) || null}
-                onChange={(option) => handleFilterChange('format', option?.value || 'all')}
-                isDisabled={isExporting}
-              />
-            </FormItem>
-          )}
-          
-          {/* Additional Options */}
-          {type === 'products' && (
-            <FormItem>
-              <Checkbox
-                checked={filters.includeInventory}
-                onChange={(checked) => handleFilterChange('includeInventory', checked)}
-                disabled={isExporting}
-              >
-                Include Inventory Details
-              </Checkbox>
-            </FormItem>
-          )}
+      <div className="flex flex-col h-full max-h-[85vh]">
+        {/* Header - Fixed */}
+        <div className="flex justify-between items-center mb-4 flex-shrink-0">
+          <h4 className="text-lg font-semibold">
+            Export {type === 'products' ? 'Products' : 'Assignments'} to Excel
+          </h4>
         </div>
         
-        <div className="flex justify-between items-center mt-6 pt-4 border-t">
-          <Button
-            variant="plain"
-            onClick={clearAllFilters}
-            disabled={isExporting}
-          >
-            Clear All
-          </Button>
+        <FormContainer className="flex-1 min-h-0">
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto pr-2 space-y-4 max-h-[calc(85vh-140px)]">
+            {/* Date Range Filters */}
+            <div className="grid grid-cols-2 gap-3">
+              <FormItem label="From Date">
+                <DatePicker
+                  value={filters.fromDate}
+                  onChange={(date) => handleFilterChange('fromDate', date)}
+                  placeholder="Select start date"
+                  disabled={isExporting}
+                />
+              </FormItem>
+              <FormItem label="To Date">
+                <DatePicker
+                  value={filters.toDate}
+                  onChange={(date) => handleFilterChange('toDate', date)}
+                  placeholder="Select end date"
+                  disabled={isExporting}
+                />
+              </FormItem>
+            </div>
+            
+            {/* Month/Year Selection */}
+            <div className="grid grid-cols-2 gap-3">
+              <FormItem label="Month">
+                <Select
+                  options={monthOptions}
+                  value={monthOptions.find(opt => opt.value === filters.month) || null}
+                  onChange={(option) => handleFilterChange('month', option?.value || '')}
+                  placeholder="Select month"
+                  isDisabled={isExporting}
+                />
+              </FormItem>
+              <FormItem label="Year">
+                <Select
+                  options={yearOptions}
+                  value={yearOptions.find(opt => opt.value === filters.year) || null}
+                  onChange={(option) => handleFilterChange('year', option?.value || '')}
+                  placeholder="Select year"
+                  isDisabled={isExporting}
+                />
+              </FormItem>
+            </div>
+            
+            {/* Entity Filters */}
+            <FormItem label="Category">
+              <Select
+                options={categoryOptions}
+                value={categoryOptions.find(opt => opt.value === filters.categoryId) || null}
+                onChange={(option) => handleFilterChange('categoryId', option?.value || '')}
+                placeholder="Select category"
+                isDisabled={isExporting}
+              />
+            </FormItem>
+            
+            <FormItem label="Branch">
+              <Select
+                options={branchOptions}
+                value={branchOptions.find(opt => opt.value === filters.branchId) || null}
+                onChange={(option) => handleFilterChange('branchId', option?.value || '')}
+                placeholder="Select branch"
+                isDisabled={isExporting}
+              />
+            </FormItem>
+            
+            <FormItem label="Department">
+              <Select
+                options={departmentOptions}
+                value={departmentOptions.find(opt => opt.value === filters.departmentId) || null}
+                onChange={(option) => handleFilterChange('departmentId', option?.value || '')}
+                placeholder="Select department"
+                isDisabled={isExporting}
+              />
+            </FormItem>
+            
+            {type === 'assignments' && (
+              <FormItem label="Employee">
+                <Select
+                  options={employeeOptions}
+                  value={employeeOptions.find(opt => opt.value === filters.employeeId) || null}
+                  onChange={(option) => handleFilterChange('employeeId', option?.value || '')}
+                  placeholder="Select employee"
+                  isDisabled={isExporting}
+                />
+              </FormItem>
+            )}
+            
+            {/* Status Filters */}
+            {type === 'assignments' ? (
+              <FormItem label="Assignment Status">
+                <Select
+                  options={statusOptions}
+                  value={statusOptions.find(opt => opt.value === filters.status) || null}
+                  onChange={(option) => handleFilterChange('status', option?.value || '')}
+                  placeholder="Select status"
+                  isDisabled={isExporting}
+                />
+              </FormItem>
+            ) : (
+              <FormItem label="Stock Status">
+                <Select
+                  options={stockStatusOptions}
+                  value={stockStatusOptions.find(opt => opt.value === filters.stockStatus) || null}
+                  onChange={(option) => handleFilterChange('stockStatus', option?.value || '')}
+                  placeholder="Select stock status"
+                  isDisabled={isExporting}
+                />
+              </FormItem>
+            )}
+            
+            {/* Format Options */}
+            {type === 'assignments' && (
+              <FormItem label="Export Format">
+                <Select
+                  options={formatOptions}
+                  value={formatOptions.find(opt => opt.value === filters.format) || null}
+                  onChange={(option) => handleFilterChange('format', option?.value || 'all')}
+                  isDisabled={isExporting}
+                />
+              </FormItem>
+            )}
+            
+            {/* Additional Options */}
+            {type === 'products' && (
+              <FormItem>
+                <Checkbox
+                  checked={filters.includeInventory}
+                  onChange={(checked) => handleFilterChange('includeInventory', checked)}
+                  disabled={isExporting}
+                >
+                  Include Inventory Details
+                </Checkbox>
+              </FormItem>
+            )}
+          </div>
           
-          <div className="flex gap-2">
+          {/* Footer - Fixed */}
+          <div className="flex justify-between items-center mt-4 pt-4 border-t flex-shrink-0">
             <Button
               variant="plain"
-              onClick={onClose}
+              onClick={clearAllFilters}
               disabled={isExporting}
             >
-              Cancel
+              Clear All
             </Button>
-            <Button
-              variant="solid"
-              icon={<HiOutlineDownload />}
-              loading={isExporting}
-              onClick={handleExport}
-            >
-              Export to Excel
-            </Button>
+            
+            <div className="flex gap-2">
+              <Button
+                variant="plain"
+                onClick={onClose}
+                disabled={isExporting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="solid"
+                icon={<HiOutlineDownload />}
+                loading={isExporting}
+                onClick={handleExport}
+              >
+                Export to Excel
+              </Button>
+            </div>
           </div>
-        </div>
-      </FormContainer>
+        </FormContainer>
+      </div>
     </Dialog>
   );
 };

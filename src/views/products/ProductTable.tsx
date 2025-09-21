@@ -22,6 +22,8 @@ import { Button, Select, Dialog, Notification, toast, DatePicker, Card } from '@
 import { HiOutlineCheckCircle, HiExclamation } from 'react-icons/hi';
 import { MdAssignmentReturn } from 'react-icons/md';
 import { BiBox } from 'react-icons/bi';
+import deepParseJson from '@/utils/deepParseJson';
+import { PERSIST_STORE_NAME } from '@/constants/app.constant';
 
 interface StockInfo {
   totalStock: number;
@@ -83,12 +85,14 @@ interface Employee {
     assignments: number;
   };
 }
+
 interface CurrentUser {
   username: string;
   role: string;
   name: string;
   email: string;
 }
+
 const ProductTable = () => {
   const tableRef = useRef<DataTableResetHandle>(null);
   const navigate = useNavigate();
@@ -123,7 +127,7 @@ const ProductTable = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<number | null>(null);
   const [expectedReturnDate, setExpectedReturnDate] = useState<Date | null>(null);
   const [notes, setNotes] = useState('');
-  const [pcName, setPcName] = useState(''); // New PC Name field
+  const [pcName, setPcName] = useState('');
   const [returnCondition, setReturnCondition] = useState<'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR'>('GOOD');
   const [availableInventory, setAvailableInventory] = useState<InventoryItem[]>([]);
   const [selectedInventoryId, setSelectedInventoryId] = useState<number | null>(null);
@@ -132,17 +136,24 @@ const ProductTable = () => {
   const [employeeSearchTerm, setEmployeeSearchTerm] = useState('');
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      try {
-        console.log(JSON.parse(userData));
+    const rawPersistData = localStorage.getItem(PERSIST_STORE_NAME)
+    const persistData = deepParseJson(rawPersistData)
 
-        setCurrentUser(JSON.parse(userData));
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-      }
+    console.log('Raw persist data:', rawPersistData);
+    console.log('Parsed persist data:', persistData);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let session = (persistData as any)?.auth?.session
+    console.log('Session from persist data:', session);
+
+    if (session) {
+      setCurrentUser(session)
+      console.log('Current user set:', session);
+    } else {
+      console.warn('No session found in persist data');
     }
   }, []);
+
   const {
     data: productsResponse,
     isLoading,
@@ -236,7 +247,6 @@ const ProductTable = () => {
     }
   });
 
-  // Delete product mutation
   const deleteMutation = useMutation({
     mutationFn: apiDeleteProduct,
     onSuccess: (response) => {
@@ -278,7 +288,7 @@ const ProductTable = () => {
     setSelectedInventoryId(null);
     setExpectedReturnDate(null);
     setNotes('');
-    setPcName(''); // Reset PC Name field
+    setPcName('');
     setAvailableInventory([]);
     setEmployeeSearchTerm('');
     setAssignDialogOpen(false);
@@ -360,7 +370,7 @@ const ProductTable = () => {
       inventoryId: selectedInventoryId || undefined,
       expectedReturnAt: expectedReturnDate?.toISOString(),
       notes,
-      pcName: pcName.trim() || undefined, // Include PC Name in the submission
+      pcName: pcName.trim() || undefined,
       autoSelect: !selectedInventoryId
     });
   };
@@ -445,6 +455,12 @@ const ProductTable = () => {
         return <div className="text-green-600  px-2 py-1 rounded text-sm">Available ({availableStock})</div>;
     }
   };
+
+  // Check if user is super admin - with proper null safety
+  const isSuperAdmin = currentUser?.role === "super_admin";
+
+  console.log('Current user in render:', currentUser);
+  console.log('Is super admin:', isSuperAdmin);
 
   const columns: ColumnDef<Product>[] = useMemo(() => [
     {
@@ -543,22 +559,25 @@ const ProductTable = () => {
                 No Stock
               </Button>
             )}
-            {currentUser?.role === "super_admin" && <Button
-              size="xs"
-              icon={<HiOutlineTrash />}
-              onClick={() => handleDeleteClick(product)}
-              variant="plain"
-              className="text-red-600 hover:text-red-800 hover:bg-red-50"
-              title={hasActiveAssignments ? "Cannot delete - has active assignments" : "Delete Product"}
-              disabled={hasActiveAssignments}
-            >
-              Delete
-            </Button>}
+            {/* FIXED: Use isSuperAdmin variable with proper null checking */}
+            {isSuperAdmin && (
+              <Button
+                size="xs"
+                icon={<HiOutlineTrash />}
+                onClick={() => handleDeleteClick(product)}
+                variant="plain"
+                className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                title={hasActiveAssignments ? "Cannot delete - has active assignments" : "Delete Product"}
+                disabled={hasActiveAssignments}
+              >
+                Delete
+              </Button>
+            )}
           </div>
         );
       },
     },
-  ], [navigate, textTheme]);
+  ], [navigate, textTheme, currentUser, isSuperAdmin]); // FIXED: Added currentUser and isSuperAdmin to dependencies
 
   if (error) {
     return (
@@ -599,7 +618,6 @@ const ProductTable = () => {
         </Button>
       </div>
 
-      {/* Using DataTable with built-in pagination */}
       <DataTable
         ref={tableRef}
         columns={columns}
@@ -622,7 +640,6 @@ const ProductTable = () => {
         width={500}
       >
         <div className="text-center">
-          {/* Warning Icon */}
           <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
             <HiExclamation className="h-6 w-6 text-red-600" />
           </div>
@@ -637,7 +654,6 @@ const ProductTable = () => {
                 Are you sure you want to delete this product? This action cannot be undone.
               </p>
 
-              {/* Product Details */}
               <div className="bg-gray-50 rounded-lg p-4 mb-4">
                 <div className="text-left space-y-2">
                   <div>
@@ -651,7 +667,6 @@ const ProductTable = () => {
                 </div>
               </div>
 
-              {/* Warnings */}
               {productToDelete.hasActiveAssignments && (
                 <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
                   <div className="flex">
@@ -702,7 +717,6 @@ const ProductTable = () => {
             </div>
           )}
 
-          {/* Action Buttons */}
           <div className="flex justify-center gap-3">
             <Button
               variant="plain"
@@ -723,6 +737,8 @@ const ProductTable = () => {
         </div>
       </Dialog>
 
+      {/* ... Rest of your dialogs remain unchanged ... */}
+      
       {/* Assign Product Dialog */}
       <Dialog
         isOpen={assignDialogOpen}
@@ -758,7 +774,6 @@ const ProductTable = () => {
               </p>
             </div>
 
-            {/* PC Name Field */}
             <div>
               <label className="block text-sm font-medium mb-1">PC Name (Optional)</label>
               <Input
@@ -769,7 +784,7 @@ const ProductTable = () => {
                 maxLength={50}
               />
               <p className="text-xs text-gray-500 mt-1">
-                Enter the PC  identifier for tracking purposes
+                Enter the PC identifier for tracking purposes
               </p>
             </div>
 
@@ -866,8 +881,6 @@ const ProductTable = () => {
                     <label className="block text-sm font-medium mb-1">
                       Serial Numbers (Optional - {stockSerialNumbers.filter(sn => sn.trim()).length} of {stockQuantity} filled)
                     </label>
-
-                    
 
                     <div
                       className="max-h-60 overflow-y-auto border rounded p-3 bg-gray-50"

@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import DataTable from '@/components/shared/DataTable';
 import { HiOutlineEye, HiOutlineRefresh, HiOutlineQrcode, HiOutlineTrash } from 'react-icons/hi';
 import { useNavigate } from 'react-router-dom';
@@ -15,6 +15,8 @@ import {
 import { Button, Dialog, Notification, toast, Select } from '@/components/ui';
 import { HiOutlineCheckCircle } from 'react-icons/hi';
 import { MdAssignmentReturn } from 'react-icons/md';
+import deepParseJson from '@/utils/deepParseJson';
+import { PERSIST_STORE_NAME } from '@/constants/app.constant';
 
 interface Assignment {
   id: number;
@@ -55,6 +57,13 @@ interface Assignment {
   };
 }
 
+interface CurrentUser {
+  token?: string;
+  role?: string;
+  username?: string;
+  [key: string]: any;
+}
+
 const AssignmentListTable = () => {
   const tableRef = useRef<DataTableResetHandle>(null);
   const navigate = useNavigate();
@@ -64,6 +73,7 @@ const AssignmentListTable = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [pagination, setPagination] = useState({ page: 1, limit: 10 });
   const [overdueFilter, setOverdueFilter] = useState(false);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [returnDialog, setReturnDialog] = useState({
     open: false,
     assignment: null as { id: number; productName: string; inventoryInfo: string } | null,
@@ -75,6 +85,24 @@ const AssignmentListTable = () => {
     open: false,
     assignment: null as { id: number; productName: string; employeeName: string } | null
   });
+
+  useEffect(() => {
+    const rawPersistData = localStorage.getItem(PERSIST_STORE_NAME)
+    const persistData = deepParseJson(rawPersistData)
+
+    console.log('Raw persist data:', rawPersistData);
+    console.log('Parsed persist data:', persistData);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let session = (persistData as any)?.auth?.session
+    console.log('Session from persist data:', session);
+
+    if (session) {
+      setCurrentUser(session)
+    } else {
+      console.warn('No session found in persist data');
+    }
+  }, []);
 
   // Data fetching
   const { 
@@ -260,6 +288,12 @@ const AssignmentListTable = () => {
     return <div className="w-fit text-white">Assigned</div>;
   };
 
+  // Check if current user is super admin - with null safety
+  const isSuperAdmin = currentUser?.role === "super_admin";
+
+  console.log('Current user:', currentUser);
+  console.log('Is super admin:', isSuperAdmin);
+
   const columns: ColumnDef<Assignment>[] = useMemo(() => [
     {
       header: 'Product',
@@ -332,19 +366,22 @@ const AssignmentListTable = () => {
             >
               Return
             </Button>
-            <Button
-              size="xs"
-              variant="solid"
-              color="red"
-              icon={<HiOutlineTrash />}
-              onClick={() => handleDeleteClick(assignment)}
-              title="Delete Assignment"
-            />
+            {/* Only show delete button if user is super admin */}
+            {isSuperAdmin && (
+              <Button
+                size="xs"
+                variant="solid"
+                color="red"
+                icon={<HiOutlineTrash />}
+                onClick={() => handleDeleteClick(assignment)}
+                title="Delete Assignment"
+              />
+            )}
           </div>
         );
       },
     },
-  ], [navigate, generateAssignmentQr, isGeneratingAssignmentQr]);
+  ], [navigate, generateAssignmentQr, isGeneratingAssignmentQr, isSuperAdmin]); // Add isSuperAdmin to dependencies
 
   if (error) {
     return (
